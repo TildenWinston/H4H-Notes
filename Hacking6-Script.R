@@ -2,7 +2,7 @@
 # A Script
 
 # setwd("~/projects/hack/muchado")
-setwd("~/projects/hack/muchado")
+
 adolines<-scan("MuchAdo-nostagedirections.txt",what="char",sep="\n")
 adolines[1:10]
 adolines<-append(adolines,"END")
