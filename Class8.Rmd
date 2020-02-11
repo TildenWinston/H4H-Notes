@@ -1,209 +1,360 @@
 ---
-title: "Class 7"
+title: "Class 8"
 output:
   html_document: default
   pdf_document: default
 ---
 
 ## Required files
-1. ado-actstabled.RDS
+1. muchado-edgelist.txt
+1. Hacking8-Network.R
 
 
-## Import 
 
-Lots of people are having trouble getting the RDS objects imported, but it can by done by making the RDS from the script
+## Today's Commands
+install.packages()
+library() -> require can be used, not sure what the exact differences are
+{igraph} A library for network analysis: igraph.org
+subset.data.frame()
+graph.data.frame{igraph}
 
-```{r setup }
-knitr::opts_chunk$set(echo = TRUE)
 
-speakerraw.l<-readRDS("ado-speakerrawlist.RDS")
-actfreqraw.l <- readRDS("ado-actstabled.RDS")
-str(actfreqraw.l)
+## Beginning of class
 
-actfreqraw.l[[1]][1:10]
+
+Thursday will be focused on Much ado
+
+We talk about graphs and stuff
+
+Can catch flavor of an author from function words - other thigns
+
+Seven Bridges of Konigsberg
+- First graph theory problem
+
+Finding Paul Revere using only metadata
+
+Adjacency Matrix and resulting graph
+-Only need 1 half unless it is a directed graph
+
+We had issues with the AV system
+
+Discussed onion article titled: Professor having trouble with audio visual
+https://www.theonion.com/ask-a-college-professor-having-trouble-with-the-audiovi-1819584653
+
+We then watch the Watch and Constable Dogberry sceen - the one with the Sexton
+
+
+## Script explained
+install.packages("igraph") only needs to be done once
+-Sometimes dependencies will make this more difficult
+
+library("igraph") then attaches igraph to the session
+
+we then import muchado-edgelist.txt as a dataframe
+dataframe allows for multiple data types.
+A matrix would not allow for different data types.
+
+ado.df[1<=ado.df\$act.sc & ado.df\$act.sc<2,]
+Give me everything in scene 1 and 2
+
+
+```{r Hacking 8 Networks}
+# Social Networks in Literature
+# February 11, 2020
+
+# install.packages("igraph") # Only needs to be done once.
+library("igraph") # Attaches igraph to the session
+#setwd("~/projects/hack/igraph")
+
+# Reading tables ------------
+# Read in information about dialogue in Much Ado...
+# I've created a representation of who speaks to whom in each scene, marking exchanges only once per scene.
+# That is if Beatrice and Benedick go back and forth for several lines, I record only:
+# BEAT\tBEN and BEN\tBEA
+# soliloquy and asides and oaths are marked with an "x"
+ado.df<-read.table('muchado-edgelist.txt', header=T) # strings come in as factors, compare read.table('muchado-edgelist.txt', header=T, stringsAsFactors=F)
+View(ado.df) # a data-frame (mixes data types)! 
+class(ado.df[,1]) == class(ado.df[,3]) 
+
+# Subsetting (Tricks) -------- 
+ado.df$char1 # factors (categorical variables)
+as.character(ado.df$char1) # as a character vector
+class(ado.df$act.sc)
+ado.df$act.sc
+which(ado.df$act.sc==4.2) # Dogberry and "malefactors" before the Sexton
+ado.df[which(ado.df$act.sc==4.2),] # same subsetting, more verbose
+grep("1.",ado.df$act.sc)
+ado.df[grep("1.",ado.df$act.sc),]
+subset.data.frame(ado.df, char1=="DOGB")
+1<=ado.df$act.sc & ado.df$act.sc<2
+ado.df[1<=ado.df$act.sc & ado.df$act.sc<2,]
+act1sc3<-ado.df[which(ado.df$act.sc==1.3),]
+
+# Try out the igraph library -----------
+g <- graph.data.frame(ado.df)
+
+str(g)
+
+V(g) # vertices, there are 23
+E(g) # edges, there are 246
+
+#get all the edges
+get.edgelist(g)
+class(get.edgelist(g)) #it's a matrix
+
+# plots
+plot(g) # The whole play: whoa, that's a spaghetti monster!
+plot(g, layout=layout.circle)
+plot(g, layout=layout.fruchterman.reingold)
+plot(g, layout=layout.graphopt)
+plot(g, layout=layout.kamada.kawai)
+
+# prettify that plot? 
+# prettier plots: http://igraph.org/r/doc/plot.common.html
+par(mai=c(0,0,1,0))
+plot(g,    		#the graph to be plotted
+     layout=layout.kamada.kawai,	# the layout method. see the igraph documentation for details
+     main='"Much Ado - Addressed Speech',	#specifies the title
+     vertex.size=4,
+     edge.arrow.size=.3,
+     vertex.label.dist=0.5,			#puts the name labels slightly off the dots
+     vertex.frame.color='blue', 		#the color of the border of the dots 
+     vertex.label.color='black',		#the color of the name labels
+     vertex.label.font=2,			#the font of the name labels
+     vertex.label=V(g)$name,		#specifies the labels of the vertices.
+     vertex.label.cex=.5			#specifies the size of the font of the labels
+)
+
+# Simplify 
+g2<-graph.data.frame(unique(ado.df[,1:2]))
+par(mai=c(0,0,1,0))
+plot(g2, layout=layout.kamada.kawai, main='"Much Ado - Unique Addressed Speech',
+     vertex.size=4, edge.arrow.size=.3, vertex.label.dist=0.5,
+     vertex.frame.color='blue', vertex.label.color='black',	
+     vertex.label.font=2, vertex.label=V(g)$name,vertex.label.cex=.5
+)
+
+# plot and save as a PDF
+pdf("ado-who2whom.pdf")
+plot(g2)
+dev.off()
+
+# Simplify: Pull out a scene?
+ado.df[,3] #ask for a column by number
+ado.df$act.sc #ask for a column by name
+ado.df[which(ado.df$act.sc == 4.2),] # subset rows
+act4sc2<-ado.df[which(ado.df$act.sc == 4.2),]
+g4<-graph.data.frame(act4sc2)
+plot(g4)
+
+V(g) # 23/23 vertices, named:
+# + 23/23 vertices, named, from 4e6264d:
+#  [1] LEON  MESS  BEAT  HERO  PEDRO BEN   JOHN  CLAUD ANTON CONR 
+# [11] BORA  BALTH MARG  URSU  BOY   DOGB  VERG  WATCH SEAC  FRIAR
+# [21] SEXT  x     LORD 
+
+# Adjacency
+neighbors(g, V(g)[3], mode = "out") #who does Beatrice talk to? (18 of 23)
+neighbors(g, V(g)[6], mode = "out") #who does Benedick talk to? (28 of 23)
+neighbors(g, V(g)[5], mode = "out") #Don Pedro? (33/23)
+neighbors(g, V(g)[1], mode = "out") #who does Leonato talk to? (40 of 23)
+neighbors(g, V(g)[3], mode = "in") #who talks to Leonato (17 of 23)
+neighbors(g, V(g)[4], mode = "out") #who does Hero talk to? (13 of 23)
+neighbors(g, V(g)[7], mode = "out") #Don John? (33/23)
+
+# Incidence (edges that share a vertex)
+incident(g,V(g)[3], mode="all")
+incident(g,V(g)[3], mode="out")
+incident(g,V(g)[3], mode="in")
+
+# indegree and outdegree socialty (quiz and sort these)
+degree(g, mode="in") # spoken to
+degree(g,mode="out") # speaks 
+
+# paths
+View(distances(g))
+View(shortest.paths(g, mode='in'))
+View(shortest.paths(g, mode='out'))
+# all_shortest_paths(g,from="HERO") #super long text
+all_shortest_paths(g2,from="DOGB",to="JOHN")
+
+# betweenness: measures the number of shortest paths going through a specific vertex
+betweenness(g)
+
+# eigenvector centrality: gives greater weight to a node the more it is connected to other highly connected nodes
+g_undirected <- as.undirected(g, mode='collapse')
+evg_social<-evcent(g_undirected)
+eigen_social<-evg_social$vector
+sort(eigen_social,decreasing=T)
+
+# closeness: "closeness centrality of a vertex is defined by the inverse of the average length of the shortest paths to/from all the other vertices in the graph"
+closeness(g, mode='in') # WTF? -- Why warning?
+components(g) # also try, component_distribution(g)
+is_connected(g)
+components(g,mode="strong") # AH! In fact, 3 graphs!
+is_connected(g,mode="strong") #My "x" and my "LORD don't talk back!
+g2<-induced_subgraph(g, which(components(g,mode="strong")$membership==1)) # Fix it
+closeness(g2)
+
+# This should also work?
+# which(ado.df$char2!="x")
+# ado2.df<-ado.df[which(ado.df$char2!="x"),]
+# ado2.df<-ado2.df[which(ado.df$char2!="LORD"),]
+# g3<-graph.data.frame(ado.df2)
+
+# Some more subsetting, tips and tricks
+act1sc3<-ado.df[which(ado.df$act.sc==1.3),]
+act1scene3.g<-graph.data.frame(act1sc3)
+str(act1scene3.g)
+act1scene3.g[1]
+neighbors(act1scene3.g,V(act1scene3.g)[2],mode="out")
+V(act1scene3.g)
+degree(g)
+
+##############
+# START HERE? -------------
+# messing about also with this: https://rstudio-pubs-static.s3.amazonaws.com/74248_3bd99f966ed94a91b36d39d8f21e3dc3.html
+
+g<-graph.empty(n=10, directed=TRUE)
+plot(g)
+
+g<-graph.full(n=10, directed = FALSE, loops = FALSE)
+plot(g)
+g<-graph.star(n=10, mode="out")
+plot(g)
+g<-graph.star(n=10, mode="in")
+plot(g)
+g<-graph.ring(n=10)
+plot(g)
+
+edges <- c(1,2, 3,2, 2,4)
+g<-graph(edges, n=max(edges), directed=TRUE)
+plot(g)
+
+vcount(g) #count vertices
+ecount(g) #count edges
+
+neighbors(g, V(g)[1], mode = 1)
+incident(g,V(g)[2], mode=c("all", "out", "in", "total"))
+is.directed(g)
+are.connected(g, V(g)[1], V(g)[3])
+get.edgelist(g)
+
+
+
+############################################################
+############################################################
+
+# From last time I taught this class: 
+# Jane Austen's Emma
+
+# read in information about Emma dialogue
+emma.df<-read.table('emma-graph.txt', header=T) # Volume 1, Who speaks to whom?
+g <- graph.data.frame(emma.df)
+
+V(g) # vertices, there are 14
+E(g) # edges, there are 90
+
+# plots
+plot(g)
+plot(g, layout=layout.circle)
+plot(g, layout=layout.fruchterman.reingold)
+plot(g, layout=layout.graphopt)
+plot(g, layout=layout.kamada.kawai)
+
+# prettify that plot? 
+# prettier plots: http://igraph.org/r/doc/plot.common.html
+par(mai=c(0,0,1,0))
+plot(g,    		#the graph to be plotted
+     layout=layout.kamada.kawai,	# the layout method. see the igraph documentation for details
+     main='"Emma" - Addressed Speech',	#specifies the title
+     vertex.size=4,
+     edge.arrow.size=.3,
+     vertex.label.dist=0.5,			#puts the name labels slightly off the dots
+     vertex.frame.color='blue', 		#the color of the border of the dots 
+     vertex.label.color='black',		#the color of the name labels
+     vertex.label.font=2,			#the font of the name labels
+     vertex.label=V(g)$name,		#specifies the labels of the vertices.
+     vertex.label.cex=.5			#specifies the size of the font of the labels
+)
+
+# plot and save as a PDF
+pdf("emmagraph.pdf")
+plot(g)
+dev.off()
+
+V(g) # 14/14 vertices, named: MrWoodhouse, Emma, MrKnightley, Harriet, MrElton, MissNash, Isabella    
+    # MrJKnightley, MrWeston ,MrsWeston, Frank, x, MrsBates, MissBates
+
+neighbors(g, V(g)[2], mode = 1) #who does Emma talk to? 
+neighbors(g, V(g)[3], mode = 1) #who does Knightley talk to? 
+
+incident(g,V(g)[2], mode=c("all", "out", "in", "total"))
+get.edgelist(g)
+
+# indegree and outdegree socialty
+degree(g, mode="in") # spoken to
+degree(g,mode="out") # speaks to 
+
+# closeness
+closeness(g, mode='in')
+closeness(g, mode='out')
+
+# betweenness: measures the number of shortest paths going through a specific vertex
+betweenness(g)
+
+# eigenvector centrality: gives greater weight to a node the more it is connected to other highly connected nodes
+g_undirected <- as.undirected(g, mode='collapse')
+evg_social<-evcent(g_undirected)
+eigen_social<-evg_social$vector
+
+# paths
+View(distances(g))
+View(shortest.paths(g, mode='in'))
+shortest.paths(g, mode='out')
+
+
+###############################################
+# messing about also with this: https://rstudio-pubs-static.s3.amazonaws.com/74248_3bd99f966ed94a91b36d39d8f21e3dc3.html
+
+g<-graph.empty(n=10, directed=TRUE)
+plot(g)
+
+g<-graph.full(n=10, directed = FALSE, loops = FALSE)
+g<-graph.star(n=10, mode="out")
+g<-graph.star(n=10, mode="in")
+g<-graph.ring(n=10)
+
+edges <- c(1,2, 3,2, 2,4)
+g<-graph(edges, n=max(edges), directed=TRUE)
+
+vcount(g) #count vertices
+ecount(g) #count edges
+
+neighbors(g, V(g)[1], mode = 1)
+incident(g,V(g)[2], mode=c("all", "out", "in", "total"))
+is.directed(g)
+are.connected(g, V(g)[1], V(g)[3])
+get.edgelist(g)
+
+
 
 ```
 
-## Matracies and Data frames
+## title
 
-Sum adds things together 
-
-lapply first
-applies the funtion to the object returning the output as a list
-always returns a list
-
-sapply returns a vector
-  s stands for simplify
-  
-there is also just apply
-
-do.call also can take a function and apply to a data structure
-Tries to bring all of the data together in some way
-applies to the list of the whole
-
-apply vs loops 
-very similar, but not the same
-R prefers apply
-apply is built to work with vectorized data
-
-matracies have 2 demensions
-rbind makes matrixes
-  RowBind
-
-R does rows then columns
+```{r title}
 
 
-
-
-```{r Matracies and Data Frames}
-
-sum(1,3) #Adds things together
-mylist <- list(c(1,2,3), c(4,5,6))
-sum(mylist[[1]]) # 6
-
-#lapply
-lapply(mylist, sum)
-
-#sapply
-sapply(mylist, sum)
-
-do.call(sum, mylist)
-
-rbind(1:3, 4:6)
-#To make a matrix
-mymatrix <- rbind(1:3, 4:6)
-
-#How to get 5 back
-mymatrix[2,2]
-
-#Does not work, out of bounds.
-# mymatrix[1,4]
-# Error in mymatrix[1, 4] : subscript out of bounds
 
 ```
 
-## Cbind
-cbind - also makes matricies
-  column bind
+## title
 
-```{r cbind}
 
-mymatrix2 <- cbind(1:3, 4:6)
-mymatrix2[2,2]
+```{r  title2}
+
+
 
 ```
 
-## Bigger matrix time
-
-Missmatched column lengths  repeat the shorter column
-
-```{r bmatrix }
-
-mymatrix <- rbind(5:10, 16:21, 100:105)
-mymatrix
-
-apply(mymatrix, 1, nchar)
-
-somenums <- cbind(a=c(3, 2, 4, 5), b = 1:15) # Mismatched column lengths, but it still works
-somenums <- cbind(a=c(3, 2, 4, 5), b = 1:4)
-somenums
-apply(somenums, 1, sum)
-
-```
-
-
-## lapply
-
-lapply() using "[", the select operator - this is bad
-
-
-## anewlist
-matrix is good enough to auto wrap
-to get an item from the matrix coordinates can be used or a list style position can be used.
-matrix3[5] goes through the matrix till it hits the 5th item.
-
-lapply(anewlist, "[",,2)
-  This is just going to take the second column out
-  This gives a warning, but it runs
-
-
-```{r}
-anewlist <- list(matrix(1:9, 3,3),matrix(4:15, 3, 3), cbind(8:10, 8:10))
-str(anewlist)
-
-mymatrix3 <- matrix(1:9, 3,3)
-mymatrix3
-mymatrix3[2,2]
-mymatrix3[5]
-
-lapply(anewlist, "[",,2)
-
-```
-
-## English major stuff
-It will go act by act and sum the words in each act
-
-lapply will return a list
-
-sapply returns a more compact vector
-
-
-is.na helps you look for nothings so you can zap it/ replace it with 0
-
-
-
-```{r}
-lapply(actfreqraw.l, sum)
-
-sapply(actfreqraw.l, sum)
-
-actfreqraw.l[[1]]["nothing"] # Looks for how many times nothing appears in each act
-
-nothings.m <- sapply(actfreqraw.l, "[", c("never", "none", "not", "nothing"))
-nothings.m
-
-is.na(nothings.m) # Looks for NAs
-which(is.na(nothings.m))
-
-nothings.m[18] <- 0
-nothings.m
-
-```
-
-## Looking for character names
-
-actfreqraw.l[[1]]["beatrice"] looks for where beatrices name is used by the characters
-it is not used in the first act
-
-NA still infects things, so we have to fix things
-
-
-```{r}
-
-actfreqraw.l[[1]]["beatrice"]
-
-unlist(lapply(actfreqraw.l, '[', "beatrice"))
-# The column name gets infected by NA
-
-ladies.m <- do.call(rbind, lapply(actfreqraw.l, "[", c("beatrice", "hero")))
-colnames(ladies.m)
-colnames(ladies.m)[1]<-"beatrice"
-colnames(ladies.m)
-
-```
-
-## Homework excersize related stuff
-
-this thing is called a term document matrix
-
-
-
-NOTE: Document term matrixes are different
-
-```{r}
-
-nothings.m <- sapply(actfreqraw.l, '[', c("never", "none", "not", "nothing"))
-nothings.m[18] <- 0
-
-
-```
