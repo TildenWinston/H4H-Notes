@@ -1,0 +1,209 @@
+---
+title: "Class 7"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+## Required files
+1. ado-actstabled.RDS
+
+
+## Import 
+
+Lots of people are having trouble getting the RDS objects imported, but it can by done by making the RDS from the script
+
+```{r setup }
+knitr::opts_chunk$set(echo = TRUE)
+
+speakerraw.l<-readRDS("ado-speakerrawlist.RDS")
+actfreqraw.l <- readRDS("ado-actstabled.RDS")
+str(actfreqraw.l)
+
+actfreqraw.l[[1]][1:10]
+
+```
+
+## Matracies and Data frames
+
+Sum adds things together 
+
+lapply first
+applies the funtion to the object returning the output as a list
+always returns a list
+
+sapply returns a vector
+  s stands for simplify
+  
+there is also just apply
+
+do.call also can take a function and apply to a data structure
+Tries to bring all of the data together in some way
+applies to the list of the whole
+
+apply vs loops 
+very similar, but not the same
+R prefers apply
+apply is built to work with vectorized data
+
+matracies have 2 demensions
+rbind makes matrixes
+  RowBind
+
+R does rows then columns
+
+
+
+
+```{r Matracies and Data Frames}
+
+sum(1,3) #Adds things together
+mylist <- list(c(1,2,3), c(4,5,6))
+sum(mylist[[1]]) # 6
+
+#lapply
+lapply(mylist, sum)
+
+#sapply
+sapply(mylist, sum)
+
+do.call(sum, mylist)
+
+rbind(1:3, 4:6)
+#To make a matrix
+mymatrix <- rbind(1:3, 4:6)
+
+#How to get 5 back
+mymatrix[2,2]
+
+#Does not work, out of bounds.
+# mymatrix[1,4]
+# Error in mymatrix[1, 4] : subscript out of bounds
+
+```
+
+## Cbind
+cbind - also makes matricies
+  column bind
+
+```{r cbind}
+
+mymatrix2 <- cbind(1:3, 4:6)
+mymatrix2[2,2]
+
+```
+
+## Bigger matrix time
+
+Missmatched column lengths  repeat the shorter column
+
+```{r bmatrix }
+
+mymatrix <- rbind(5:10, 16:21, 100:105)
+mymatrix
+
+apply(mymatrix, 1, nchar)
+
+somenums <- cbind(a=c(3, 2, 4, 5), b = 1:15) # Mismatched column lengths, but it still works
+somenums <- cbind(a=c(3, 2, 4, 5), b = 1:4)
+somenums
+apply(somenums, 1, sum)
+
+```
+
+
+## lapply
+
+lapply() using "[", the select operator - this is bad
+
+
+## anewlist
+matrix is good enough to auto wrap
+to get an item from the matrix coordinates can be used or a list style position can be used.
+matrix3[5] goes through the matrix till it hits the 5th item.
+
+lapply(anewlist, "[",,2)
+  This is just going to take the second column out
+  This gives a warning, but it runs
+
+
+```{r}
+anewlist <- list(matrix(1:9, 3,3),matrix(4:15, 3, 3), cbind(8:10, 8:10))
+str(anewlist)
+
+mymatrix3 <- matrix(1:9, 3,3)
+mymatrix3
+mymatrix3[2,2]
+mymatrix3[5]
+
+lapply(anewlist, "[",,2)
+
+```
+
+## English major stuff
+It will go act by act and sum the words in each act
+
+lapply will return a list
+
+sapply returns a more compact vector
+
+
+is.na helps you look for nothings so you can zap it/ replace it with 0
+
+
+
+```{r}
+lapply(actfreqraw.l, sum)
+
+sapply(actfreqraw.l, sum)
+
+actfreqraw.l[[1]]["nothing"] # Looks for how many times nothing appears in each act
+
+nothings.m <- sapply(actfreqraw.l, "[", c("never", "none", "not", "nothing"))
+nothings.m
+
+is.na(nothings.m) # Looks for NAs
+which(is.na(nothings.m))
+
+nothings.m[18] <- 0
+nothings.m
+
+```
+
+## Looking for character names
+
+actfreqraw.l[[1]]["beatrice"] looks for where beatrices name is used by the characters
+it is not used in the first act
+
+NA still infects things, so we have to fix things
+
+
+```{r}
+
+actfreqraw.l[[1]]["beatrice"]
+
+unlist(lapply(actfreqraw.l, '[', "beatrice"))
+# The column name gets infected by NA
+
+ladies.m <- do.call(rbind, lapply(actfreqraw.l, "[", c("beatrice", "hero")))
+colnames(ladies.m)
+colnames(ladies.m)[1]<-"beatrice"
+colnames(ladies.m)
+
+```
+
+## Homework excersize related stuff
+
+this thing is called a term document matrix
+
+
+
+NOTE: Document term matrixes are different
+
+```{r}
+
+nothings.m <- sapply(actfreqraw.l, '[', c("never", "none", "not", "nothing"))
+nothings.m[18] <- 0
+
+
+```
