@@ -1,0 +1,57 @@
+---
+title: "Class 9"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Book day
+
+Today was a book day.
+
+```{r}
+
+
+```
+
+# betweenness: measures the number of shortest paths going through a specific vertex
+betweenness(g)
+
+# eigenvector centrality: gives greater weight to a node the more it is connected to other highly connected nodes
+g_undirected <- as.undirected(g, mode='collapse')
+
+evg_social<-evcent(g_undirected)
+
+eigen_social<-evg_social$vector
+
+sort(eigen_social,decreasing=T)
+
+# closeness: "closeness centrality of a vertex is defined by the inverse of the average length of the shortest paths to/from all the other vertices in the graph"
+closeness(g, mode='in') # WTF? -- Why warning?
+
+components(g) # also try, component_distribution(g)
+
+is_connected(g)
+
+components(g,mode="strong") # AH! In fact, 3 graphs!
+
+is_connected(g,mode="strong") #My "x" and my "LORD don't talk back!
+
+g2<-induced_subgraph(g, which(components(g,mode="strong")$membership==1)) # Fix it
+
+closeness(g2)
+
+
+## Movie time
+Joss Weadom and the Branough(sp?)
+
+Benedick overhearing II.iii.87ff
+
+Beatrice overhears III.i.18ff
+
+
+```{r}
+
+```
