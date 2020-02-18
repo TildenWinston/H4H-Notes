@@ -88,6 +88,7 @@ str_trim(unlist(str_split(janewords,boundary("sentence")))) #trim whitespace
 waber<-c("lip stick","lip sticky","lip stack","lip stacky", "lip stuck", "lip stucky", "lips tick", "lips ticky", "lips tack", "lips tacky", "lips tuck", "lips tucky")
 
 #install.packages("htmlwidgets")
+#install.packages("htmltools")
 library(htmltools)
 library(htmlwidgets)
 str_view_all(waber,"lip( s|s )t(i|u)cky?")
