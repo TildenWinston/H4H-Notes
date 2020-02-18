@@ -1,0 +1,217 @@
+# Hacking 10: Regular Expressions
+# 2/20/2020
+
+# Stringr Package -------------------------
+
+# install and use stringr for better string splitting
+install.packages("stringr")
+
+library(stringr)
+
+#stringr does this sort of thing:
+janewords <- c("These are Jane's words. Some more high-falutin' words. Yup!")
+str_split(janewords,boundary("word")) # OMG, I'm so happy
+str_split(janewords,boundary("sentence")) # OMG, I'm even happier!
+str_trim(unlist(str_split(janewords,boundary("sentence")))) #trim whitespace
+
+# Also has a viewer, which is helpful if you're practicing regex
+
+# From Waber's Essay on Regex Poetry
+waber<-c("lip stick","lip sticky","lip stack","lip stacky", "lip stuck", "lip stucky", "lips tick", "lips ticky", "lips tack", "lips tacky", "lips tuck", "lips tucky")
+
+str_view_all(waber,"lip( s|s )t(i|u)cky?")
+# Note, errors and dependencies! What do we do? ...
+
+# Scanning in Shakespeare's Sonnets --------------------
+
+# let's scan in the sonnets:
+setwd("~/projects/hack/Shakespeare/sonnets")
+# Scan in a text, separate by line breaks
+sonnets<-scan("ShakespeareSonnets.txt",what="char",sep="\n")
+# Remove the header
+sonnets<-sonnets[-(1:7)]
+head(sonnets)
+tail(sonnets)
+sonnets[1:15] # First Sonnet
+
+titleposition<-grep("^[0-9]+",sonnets) # find sonnet "titles" by matching numbers
+length(titleposition) #154 sonnets
+length(sonnets) #2309 lines
+
+sonnets<-c(sonnets,"END") #insert an END line for looping
+length(sonnets) #2310
+titleposition<-c(titleposition,2310)
+
+#loop returns three lists (initialized below):
+sonnetwords.v<-NULL # a bag for a bag of words
+sonnetlines.l<-list() #all the lines in every sonnet in a handy list
+sonnetwords.l<-list() #all the words, likewise listed
+sonnettables.l<-list() # a frequency table for each sonnet (raw counts)
+sonnetrelfreq.l<-list() #relative frequencies
+
+for(i in 1:154){
+  # create a title for the sonnet by pasting sonnet to a number
+  sonnetname<-paste("sonnet",i)
+  # Find begin and end of each sonnet
+  start<-titleposition[i]+1
+  end<-titleposition[i+1]-1
+  # Chunk 14 lines of sonnet
+  sonnetlines<-sonnets[start:end]
+  sonnetlines.l[[sonnetname]]<-sonnetlines #create list of sonnets, each list element has 14 sonnet lines in it
+  # Paste together 14 lines as blob
+  sonnet<-paste(sonnetlines)
+  # Split the blob into words (now I have a bag of words for the sonnet)
+  sonnetwords<-unlist(str_split(sonnet,boundary("word")))
+  # Lower case all the words in the bag of words
+  sonnetwords<-tolower(sonnetwords)
+  # Remove blanks
+  sonnetwords<-sonnetwords[which(sonnetwords!="")]
+  sonnetwords.l[[sonnetname]]<-sonnetwords #list of bags of words
+  # Build a big bag of words for all the poems (one bag)
+  sonnetwords.v<-c(sonnetwords.v,sonnetwords) #collect all the words in a single vector
+  # Table the words in "sonnet i"
+  sonnet.t<-sort(table(sonnetwords),decreasing=T) 
+  sonnettables.l[[sonnetname]]<-sonnet.t #list of frequency tables
+  sonnetrelfreq.l[[sonnetname]]<-100*(sonnet.t/sum(sonnet.t)) #list of frequency tables, relative frequencies
+}
+
+#a list of lists:
+allsonnetlists.l<-list(sonnetlines.l,sonnetwords.l,sonnettables.l,sonnetrelfreq.l)
+str(allsonnetlists.l)
+saveRDS(allsonnetlists.l,file="sonnetlists.RDS")
+
+# also create a no-punctuation vector for grepping exercises:
+sonnets.nopunct<-gsub("[,.:;!?-]","",tolower(sonnets))
+
+
+# Basic matching and grepping ------------------------
+
+# Longest word in the sonnets?
+wordlengths<-nchar(sonnetwords.v)
+sonnetwords.v[which(wordlengths==max(wordlengths))] # 14 letter words
+
+# Find keywords
+sonnets[grep("fire",sonnets)] # lines with "fire" in them
+str_view_all(sonnetlines.l[[153]],"fire")
+
+sapply(sonnetlines.l,str_view_all, pattern="fire") # fails, returns an ugliness 
+
+# Count strings 
+length(grep("will",sonnetwords.v))
+sum(str_count(sonnetwords.v,"will")) # in stringr package
+
+# Count number of vowels in sonnets with str_count
+
+str_count(sonnetwords.v, "a|e|i|o|u")
+
+vowels <- c("a", "e", "i", "o", "u")
+word<-"supercalifragilisticexpialidocious"
+str_count(word,vowels)
+
+vowelcounts <- vector(mode = "integer", length = 5)
+names(vowelcounts)<-vowels
+for (i in 1:5) {
+  countsbyword<-str_count(sonnetwords.v, vowels[i])
+  vowelcounts[i]<-sum(countsbyword) }
+vowelcounts # BONUS: can you figure out how to do this with an apply function?
+
+# Playing with grep and sapply over these lists --------------------
+
+grep(sonnetwords.l,pattern="fire") #which sonnets are these?
+sonnetwords.l[[45]]
+sapply(sonnetlines.l,grep,pattern="water",value=T) # but note, 
+# empty list elements where there's no match. Is there a more compact way to print?
+
+# A few years ago, Clay Ford (R guru in Brown Library) showed me one way to drop all the empty list elements that are returned
+# Two ways, in fact: 1. Base R and using the purr package (I've commented out the second, advanced way)
+
+# example data
+test <- list(a = letters[1:3], b = letters[4:6])
+
+# Dummy base R example:
+out <- sapply(test, grep, pattern = "a", value = TRUE)
+keep <- sapply(out, function(x) length(x)!=0)
+out[keep]
+
+#Here's my grepping over the list in base R:
+out<-sapply(sonnetlines.l, grep, pattern = "youth", value = TRUE)
+keep<-sapply(out, function(x)length(x)!=0)
+out[keep]
+
+# # There's another way. This is the "Hadley Wickham way," using purrr package
+# # map() is Wickham's version of lapply/sapply
+# library(purrr) # for map() and keep(), you will need to install the purrr package
+# out2 <- map(test, grep, pattern = "a", value = TRUE)
+# keep(out2, function(x)length(x)!=0)
+
+
+# Tricky grepping ---------------------------
+
+#find ABAB and ABBA patterns? 
+
+# doubled words (Waber: this regex "contains zero literal characters, only meta-characters...")
+grep("\\s+(\\w+) \\1\\s+",sonnets.nopunct,value=T)
+
+#ploce?
+grep("(\\b[a-z]{3,8}\\b)( \\w+)* \\1(\\w+)+",sonnets.nopunct,value=T) #repeats twice, but filter out the, thee and you, your?
+str_view(sonnets.nopunct,"(\\b[a-z]{3,8}\\b)( \\w+)* \\1(\\w+)+",match=T)
+
+# "thyself ... thy ... self" matches
+grep("thyself( \\w+)* thy( \\w+)* self", sonnets.nopunct,value=T)
+
+
+# ABABs
+grep("(\\w+) (\\w+) (\\w+ )*\\1 \\2",sonnets.nopunct,value=T) # ABAB, simple bigrams: my love, my love
+grep("(\\w+) (\\w+) (\\w+ )*\\1 (\\w+ )*\\2",sonnets.nopunct,value=T) # ABABs (more!)
+grep("(\\w+) (\\w+ )*(\\w+) (\\w+)* \\1 (\\w+ )*\\3",sonnets.nopunct,value=T) # more ABABs, takes a while
+
+# Compare these in stringr
+str_view(sonnets.nopunct,"(\\w+) (\\w+) (\\w+ )*\\1 (\\w+ )*\\2",match=T)
+str_view(sonnets.nopunct,"(\\w+) (\\w+ )*(\\w+) (\\w+)* \\1 (\\w+ )*\\3",match=T)
+
+# ABBAs
+grep("(\\w+) (\\w+ )*(\\w+) (\\w+)* \\3 (\\w+ )*\\1",sonnets.nopunct,value=T) # ABBA
+str_view(sonnets,"(\\w+) (\\w+ )*(\\w+) (\\w+)* \\3 (\\w+ )*\\1",match=T)
+str_view(sonnets.nopunct," (\\w+) (\\w+) (\\w+ )*\\2 (\\w+ )*\\1",match=T)
+
+# Lots of ways to write a regex...
+grep("(\\w+) (\\w+|\\w+ \\w+|\\w+ \\w+ \\w+) (\\w+) (\\w+|\\w+ \\w|+|\\w+ \\w+ \\w+) \\1 \\3",sonnets.nopunct,value=T)
+# [1] "as fast as thou shalt wane so fast thou grow'st" "and chide thy beauty and thy straying youth"    
+# [3] "to what you will to you it doth belong"          "thou art as fair in knowledge as in hue"  
+
+#compare
+grep("(\\b[a-z]{2,8}\\b ).*( \\b[a-z]{2,8}\\b ).*\\2.*\\1",sonnets.nopunct,value=T)
+# [1] "more than that tongue that more hath more expressed"
+# [2] "but day by night and night by day oppressed"        
+# [3] "or any of these all or all or more"                 
+# [4] " the pain be mine but thine shall be the praise"    
+# [5] "take all my loves my love yea take them all"        
+# [6] "of hand of foot of lip of eye of brow"              
+# [7] "none else to me nor i to none alive"                
+# [8] "thou art as tyrannous so as thou art"               
+# [9] " who art as black as hell as dark as night" 
+
+#compare:
+grep("(\\b[a-z]{4} ).*(\\b[a-z]{4} ).*\\1.*\\2",sonnets.nopunct,value=T)
+# [1] "as fast as thou shalt wane so fast thou grow'st"   
+# [2] "thou dost love her because thou know'st i love her"
+# [3] "against that time if ever that time come"          
+# [4] " if thou dost seek to have what thou dost hide"  
+
+grep("(\\b[a-z]{2,8}\\b ).*( \\b[a-z]{2,8}\\b ).*\\1.*\\2",sonnets.nopunct,value=T)
+# [1] "with sun and moon with earth and sea's rich gems"   
+# [2] " lo thus by day my limbs by night my mind"          
+# [3] "thou dost love her because thou know'st i love her" 
+# [4] "the first my thought the other my desire"           
+# [5] "and i am still with them and they with thee"        
+# [6] " being had to triumph being lacked to hope"         
+# [7] "and all my soul and all my every part"              
+# [8] "some glory in their birth some in their skill"      
+# [9] "some in their wealth some in their body's force"    
+# [10] "some in their hawks and hounds some in their horse" 
+# [11] "of hand of foot of lip of eye of brow"              
+# [12] "the mountain or the sea the day or night"           
+# [13] "that it nor grows with heat nor drowns with showers"
+# [14] "but then my friend's heart let my poor heart bail"  
+# [15] " who art as black as hell as dark as night"
+
