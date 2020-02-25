@@ -1,0 +1,195 @@
+---
+title: "Class 12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Midterm review / Prep
+Part I. Fill in the blanks
+Part II. Data Structures
+Part III. Subsetting
+Part IV. Commenting Code
+
+Next week will be statistics.
+
+
+## How to print out Waldo?
+
+print(here)
+
+```{r }
+# Exam Practice (2/21/2019)
+
+# Where's Waldo? -------------------
+
+here<-"Waldo"
+there<-"Falstaff"
+Ohio<-"Joe"
+# Where's Waldo? (That is, what would you write at the R prompt to get "Waldo" to return?)
+
+print(here)
+```
+
+# How to get Waldo?
+people[[2]]
+people[[2]][1]
+note the two brackets, one brackets gets the list, we just want Waldo.
+
+class(people[1]) => list
+class(people[[1]]) => character
+
+```{r} 
+people<-list(there,here,Ohio)
+# Now where's Waldo?
+people[[2]]
+people[[2]][1]
+
+```
+
+## Probably more cruel than the actual exam
+Matrix fun
+Matrixes are rows then columns
+
+Just keep playing these games. The Waldo questions text understanding of objects.
+
+```{r }
+
+# Put numbers 1 - 6 into a matrix with 3 rows and 2 columns
+mymatrix<-matrix(1:6,3,2)
+
+for(i in 1:3) {
+  # Loop to 3, i picks out the person in people list
+  individ<-people[[i]]
+  mymatrix[i,1]<-individ # writes that person into the matrix at row i, column 1
+  mymatrix[i,2]<-letters[2*i] # Writes a letter from letters into row i, column 2
+  }
+# Where's Waldo?
+mymatrix[2,1]
+
+
+# List with vectors, x[[2]] returns a vector
+# There will be a question a lot like this on the exam
+x<-list("Hal",c("Joe","Waldo"),"Douglas")
+# Where's Waldo?
+x[[2]][2]
+
+y<-list("Hotspur",x)
+# Where's Waldo?
+y[[2]][[2]][2]
+
+```
+
+## Dataframes time
+factors are a thing, they are wierd
+
+rows are always data.frame objects, columns can be other types such as integer or character
+
+```{R}
+# Dataframes --------------------
+
+df<-data.frame(x=1:5,y=10:14,z=letters[1:5],stringsAsFactors = F)
+df
+class(df[2,])
+class(df[1:2,])
+class(df[,2:3])
+class(df[,2]) # Integer
+class(df[2,][2]) 
+class(df[2,][[2]]) # bonus, predict what is returned
+class(df[,3]) # Character
+class(is.na(df[,3][6])) # df gives an NA, is.na() then returns true.
+
+df2<-data.frame(x=1:5,y=10:14,z=15:19,stringsAsFactors = F)
+class(df2[2,]) #data.frame
+```
+
+## Python????
+>>> i = None
+>>> type(i)
+<class 'NoneType'>
+
+numeric = decimal
+integer = integer
+
+```{R}
+
+# Much Ado About Nothing ------------------
+# This goes beyond the exam
+
+class("")
+class(NULL)
+class(NA) # huh...
+length(character(0))
+length(integer(0))
+length(NA) # huh!
+length(NULL)
+length("")
+0+0
+0+NA
+0+NULL
+NA+NA
+NA+NULL
+NULL+NULL
+```
+
+## More classes
+
+Integer vs Numeric, not a big deal for this exam
+
+Vectors are like matricies
+
+lists are like dataframes
+
+https://stackoverflow.com/questions/24052158/why-is-the-class-of-a-vector-the-class-of-the-elements-of-the-vector-and-not-vec
+
+rows then columns - RC Cola
+
+
+
+
+```{R }
+
+# Predict the Class! --------------------
+# Predict first, then execute the line to see if you were right.
+
+class("I didn't get an F on my exam because I studied!")
+class("F")
+class(F)
+
+class(pi)
+class(1:100)
+class(-1:1)
+class(2)
+class(2L)
+class(-2)
+
+class("LETTERS")
+
+#Remember that strsplit gives lists
+class(unlist(strsplit("R is angry and must be propitiated!",split="\\W")))
+
+class(length(letters))
+
+class(class(T))
+
+# rbind makes things into matrixes
+class(rbind(x=(1:5),y=10:14))
+
+# dim gives dimensions
+class(dim(rbind(x=(1:5),y=10:14)))
+
+class(data.frame(rbind(x=(1:5),y=10:14)))
+
+class(data.frame(rbind(x=1:5,y=10:14))[1,])
+
+class(data.frame(rbind(x=1:5,y=10:14))[,1])
+
+# Data will be turned coalesced into characters
+x <- c(1:3)
+y <- letters[1:3]
+rbind(x,y)
+
+```
+
