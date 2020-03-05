@@ -90,8 +90,8 @@ sonnet.tokens <- do.call(cbind, lapply(sonnetrawtables.l,sum))
 sonnet.vocab <- do.call(cbind, lapply(sonnetrawtables.l,length))
 sonnet.mean <- do.call(cbind, lapply(sonnetrawtables.l, mean))
 
-which.max(sapply(sonnetrawtables.l, length)) # s(first) sonnet with the most unique words
-max(sapply(sonnetrawtables.l, length))
+which.max(sapply(sonnetrawtables.l, length)) # first position of the sonnet with the most unique words
+max(sapply(sonnetrawtables.l, length)) # The value of most unique words (Number of unique words in sonnet 17)
 
 sort(sapply(sonnetrawtables.l, length))
 

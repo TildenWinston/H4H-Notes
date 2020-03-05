@@ -469,10 +469,10 @@ mean(sonnetrawtables.l[[18]])</code></pre>
 sonnet.vocab &lt;- do.call(cbind, lapply(sonnetrawtables.l,length))
 sonnet.mean &lt;- do.call(cbind, lapply(sonnetrawtables.l, mean))
 
-which.max(sapply(sonnetrawtables.l, length)) # s(first) sonnet with the most unique words</code></pre>
+which.max(sapply(sonnetrawtables.l, length)) # first position of the sonnet with the most unique words</code></pre>
 <pre><code>## sonnet 17 
 ##        17</code></pre>
-<pre class="r"><code>max(sapply(sonnetrawtables.l, length))</code></pre>
+<pre class="r"><code>max(sapply(sonnetrawtables.l, length)) # The value of most unique words (Number of unique words in sonnet 17)</code></pre>
 <pre><code>## [1] 93</code></pre>
 <pre class="r"><code>sort(sapply(sonnetrawtables.l, length))</code></pre>
 <pre><code>##  sonnet 53 sonnet 105  sonnet 46  sonnet 62 sonnet 136  sonnet 74  sonnet 77 
