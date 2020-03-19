@@ -1,0 +1,443 @@
+---
+title: "Class 15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## First live virtual session
+
+First Virtual session
+
+we discussed what to do going forward
+There were a couple votes for inperson
+
+Optional 2pm class time, extra homework session on Fridays
+
+Homeworks are now due on Sunday
+
+4/17 is the project pitch deadline
+- Network analysis
+- Could go into stats
+- n-grams, repeating words
+- Pricipal component analysis
+- Sentiment analysis - made interesting by the dictionary you use, could do clustering or add in Machine Learning
+- Topic modeling
+- Vector Semantics
+
+Best papers have either a neat computational or close reading trick
+
+## We are now moving into Blake with a bit of twitter
+
+We will do some web scraping and then piping
+
+We will be using packages
+
+Packages:
+1. Tau
+2. Magritter
+3. Rvest
+
+We are also talking about functions
+
+You can type in functions and then we get info about them back
+e.g. 
+length
+functionA
+
+
+Basic function
+between the curly braces is what happens in the function
+
+function(x){
+  if (length(x) <= 1) {return null}
+}
+
+Functions are good for any time when we are repeating code a lot
+
+
+
+```{r Hacking15-Packages.R}
+# Hacking 15. Working with Packages
+# March 19,2020
+# Commands and More
+
+# Functions----
+# Thinking about functions, writing our own
+iam<-function(name){sprintf("I am %s", name)} # This makes the function available to us
+iam("Brad")
+iam("a plain-dealing villain") # see Ado I.iii.28
+iam("an ass") # Ado IV.ii.74
+iam("not that I am") # see Othello I.i.65
+
+#Custom function
+av <- function(x,y){(x+y)/2}
+av(4,8)
+
+
+
+# A function for scanning in texts!
+scanner<-function(filename){
+  library(stringr)
+  lines<-scan(filename,what="char",sep="\n")
+  words<-tolower(unlist(str_split(lines,boundary("word"))))
+  bagofwords<-words[which(words!="")]
+  return(bagofwords) # This is an explicit return statement
+}
+
+scanner("MuchAdo-justwordsnopunct.txt")
+
+```
+
+## Next we created a custom script/ tool box and placed scanner in it.
+I chose to save it as RTools.R
+
+We can add the file and make it available by using "source("filename")"
+source runs all of the R code in the file specifice, if it is only functions, they are initialized and can then be called
+
+Technical definition
+Package is a directory of files, a library is into which packages are installed
+
+By the end of the semester we will encounter a package with some C code
+
+Library is better to use than require, library gives better error codes. Error message vs warning
+require("tau")
+
+Tau has respectable documentation
+
+TM is another text mining/ text analysis package
+NLP is another
+
+
+google books ngram viewer to look at word/phrase popularity over time
+https://books.google.com/ngrams
+
+
+```{R}
+
+source("RTools.R")
+
+# You can also create a function on the fly...
+# Remember when we did this sort of thing? -- see my HW4-Solutions
+# df<-Reduce(function(x,y){merge(x,y, by="ngrams")},df.list)
+
+#Using the tau package ----
+
+# install.packages('tau') #uncomment and run line to install.
+library("tau") # Text Analysis Utilities: can remove stopwords, find ngrams, etc.
+txt <- "So long lives this, and this gives life to thee." # Sonnet 18
+textcnt(txt,method="string",n=2) # 2 means we are finding bigrams, breaks the string into neighboring words and then checks if they are the same. 
+
+
+#Try it with The Sonnets
+
+sonnets<-scan("ShakespeareSonnets.txt",what="char",sep="\n")
+sonnetgrams<-textcnt(sonnets,method="string",n=2)
+sonnetgrams.df<-data.frame(bigrams=names(sonnetgrams),
+        counts=unclass(sonnetgrams), chars = nchar(names(sonnetgrams)))
+rownames(sonnetgrams.df)<-NULL  # takes row name out
+sonnetgrams.sort.df<-sonnetgrams.df[order(sonnetgrams.df$counts,decreasing=T),] # Sorting, ordering on a specific column
+View(sonnetgrams.sort.df)
+
+```
+## Bigrams and more
+Bigrams used in Alexander Pope's translation of the Iliad
+
+Can remove certain bigrams or focus on only specific ones
+
+
+```{R} 
+
+#Try it with The Much Ado
+ado<-scan("MuchAdo-justwords.txt",what="char",sep="\n")
+adograms<-textcnt(ado,method="string",n=2)
+adograms.df<-data.frame(bigrams=names(adograms),
+                           counts=unclass(adograms), chars = nchar(names(adograms)))
+rownames(adograms.df)<-NULL
+adograms.sort.df<-adograms.df[order(adograms.df$counts,decreasing=T),]
+View(adograms.sort.df)
+
+#Trigrams?
+sonnet3grams<-textcnt(sonnets,method="string",n=3)
+sonnet3grams.df<-data.frame(counts = unclass(sonnet3grams), chars = nchar(names(sonnet3grams)))
+sonnet3grams.sort.df<-sonnet3grams.df[order(sonnet3grams.df$counts,decreasing=T),]
+View(sonnet3grams.sort.df)
+
+# Grep for thou in sonnets?
+sonnetgrams.df[grep("thou .+",sonnetgrams.df$bigrams),]
+sonnetgrams.df[grep(".+ eyes",sonnetgrams.df$bigrams),]
+sonnetgrams.df[grep(".+ youth",sonnetgrams.df$bigrams),]
+
+# Grep for characters in ado?
+adograms.df[grep(".+ beatrice",adograms.df$bigrams),]
+adograms.df[grep(".+ benedick",adograms.df$bigrams),]
+adograms.df[grep(".+ hero",adograms.df$bigrams),]
+
+# Similar to a homework question
+
+#Adjective-Proper Nouns. Knocking bigrams out by hand.
+adjchars.df<-data.frame(rbind(adograms.df[grep(".+ beatrice",adograms.df$bigrams),], 
+                adograms.df[grep(".+ benedick",adograms.df$bigrams),],
+                 adograms.df[grep(".+ claudio",adograms.df$bigrams),], 
+                 adograms.df[grep(".+ hero",adograms.df$bigrams),]))
+rownames(adjchars.df)<-NULL
+adjchars.df<-adjchars.df[-c(1:6,8:9,11:12,14:17,19:23,25:39,40:45,49:61,63,66:74,76:78,80,82,84:89,91,93:97,99:100,103,105:119,121:131,133),]
+View(adjchars.df)
+
+```
+
+## Web scraping time
+
+Hitting the internet with R.
+
+We need to take a brief dive into markup  languages
+
+Scraping will pay the bills
+
+You can see a web
+
+Can scrape just with R, but it is not much fun.
+Better to use packages
+
+selectorgadget.com <- gets or specifiers for elements you want
+Allows you to build what you want/ don't want
+
+In homework we will do this with Wikipedia
+
+```{R }
+# Scraping, the hard way...
+# Requires a lot of clean-up
+
+url2<-"https://www.gutenberg.org/files/1934/1934-h/1934-h.htm"
+tmp2 <- readLines(url2, warn = F)
+title.index <- grep("\\<h3\\>",x = tmp2) # indexing poem titles
+poem1<-tmp2[title.index[2]:(title.index[3]-1)] # first poem (but with markup)
+
+
+
+
+
+
+
+############################################
+
+# It's much better to use a package that can parse XML/HTML
+library(rvest) # Web scraping package
+library(magrittr)
+
+# Example from rvest documentation
+movie <- read_html("http://www.imdb.com/title/tt0069398/?ref_=nm_flmg_dr_78") # Godard's "Tout Va Bien"
+cast <- html_nodes(movie, "#titleCast span.itemprop")
+html_text(cast)
+html_name(cast)
+html_attrs(cast)
+html_attr(cast, "class")
+
+# Trying the same with Lou's List (inspired by a Michele CLaibourn tutorial for StatLab)
+lous.english<-read_html("https://rabi.phys.virginia.edu/mySIS/CS2/page.php?Semester=1178&Type=Group&Group=English")
+nodes<-html_nodes(lous.english,".CourseNum")
+courses<-html_text(nodes)
+courses<-gsub("^\\s+","",courses)
+
+############################################
+############################################
+
+library(magrittr)
+"Ceci n'est pas un pipe" %>% nchar()
+"Ceci n'est pas un pipe" %>% gsub("un", "une", .) # using the dot as a placeholder
+"Ceci n'est pas un pipe" %>% gsub("un", "une", .) %>% nchar
+
+############################################
+
+# Practice with magrittr... Rewrite our scanner function. 
+
+scanner<-function(filename){
+  library(stringr); library(magrittr)
+  bagofwords<-scan(filename,what="char",sep="\n") %>%
+    str_split(boundary("word")) %>% unlist() %>% tolower() %>%
+    .[which(.!="")] # When the LHS is needed at a position other than the first, use the dot ('.') as placeholder. 
+  return(bagofwords)
+}
+
+############################################
+
+# Example with Isaac Watts
+
+# Watts
+wattspage<-read_html("http://quod.lib.umich.edu/e/ecco/004819385.0001.000?rgn=main;view=fulltext")
+lines<-html_nodes(wattspage,"h4 , h3 , .line") %>% 
+  # %>% is the pipe operator, it feeds the result to the next function: html_text()
+  html_text() # That gets titles and lines. Assigning them, at start of this 
+#chain, to lines
+
+# I suppose all this could be added to the pipeline... see below
+lines<-gsub("\\n"," ",lines) # clean up line breaks, see page image: http://quod.lib.umich.edu/e/ecco/004819385.0001.000/64
+lines<-c(lines,"END")
+
+# All in pipeline. Hadley Wickham would be so proud...
+# wattspage<-read_html("http://quod.lib.umich.edu/e/ecco/004819385.0001.000?rgn=main;view=fulltext")
+# lines<-html_nodes(wattspage,"h4 , h3 , .line") %>% 
+#   # %>% is the pipe operator, it feeds the result to the next function: html_text()
+#   html_text() %>% gsub("\\n"," ",.) %>% c("END")
+
+# Which of these lines are titles? (Looking in the object lines)
+# Zap some subtitles
+lines<-lines[-709] # not a title
+lines<-lines[-747] # not a title
+titles<-c(1,23,57,91,117,143,161,191,225,251,277,295,321,347,373,399,421,447,
+          473,499,517,539,573,591,609,627,645,663,681,692,709,734,747,768,787,804,829,857,898,915,972)
+
+
+# that's the wimpy way (I indexed titles by hand). Get the titles?
+titles.scraped.index<-html_nodes(wattspage,"h3")
+titles.scraped<-html_text(titles.scraped.index)
+titles.scraped 
+
+# initialize lists for loop
+poems.l<-list()
+poemspasted.l<-list()
+
+# loop through scraped data
+for(i in 1:length(titles)){
+  if(i < length(titles)){
+    title<-lines[titles[i]]
+    start<-titles[i]+1
+    end<-titles[i+1]-1
+    poem<-lines[start:end]
+    poempasted<-paste(poem,collapse="\n")
+    poems.l[[title]]<-poem
+    poemspasted.l[[title]]<-poempasted
+  }
+}
+
+filenames<-gsub("\\s|\\.|,|;", "",tolower(names(poemspasted.l)))
+
+# Write into files and leave on desktop in a folder
+#dir.create("~/Desktop/watts")
+#setwd("~/Desktop/watts")
+
+for(i in 1:length(filenames)){
+  wfile<-file(paste0(filenames[i],".txt"))
+  writeLines(poemspasted.l[[i]],wfile)
+  close(wfile)
+}
+
+
+####################################################
+####################################################
+
+
+# Below is the record of a previous class attempt to do Part-of-Speech tagging. The package installation is relatively straightforward on a PC, but it is no fun on a Mac! Uncomment and run lines of code to experiment with the POS tagger
+
+# POS Annotation -- JAVA IS THE DEVIL!
+# Note, this set of commands fails fast because openNLP requires java (the rJava package). 
+# That means you need Java on your machine. 
+# The installation of Java is not trivial on an Mac!
+# See here for downloads: http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html
+# Worse and worse, you can install Java and R may not be able to find it. That's a
+# problem that I've been having... This code worked two years ago, not now because I updated my OS last year.
+# Java: lots of griping and confusion on Stack Overflow...
+# Maybe start here: https://stackoverflow.com/questions/30738974/rjava-load-error-in-rstudio-r-after-upgrading-to-osx-yosemite
+# Fullest explanation I've seen is here: http://www.owsiak.org/?p=3671
+# Best troubleshooting: http://charlotte-ngs.github.io/2016/01/MacOsXrJavaProblem.html
+# This last link includes the recipe that I followed successfully below:
+
+# A brief record of how I solved this problem:
+# download java from here: http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html
+# I had Java 6 (1.6) on my machine already. I installed the latest, which is 8 (1.8)
+# In Terminal, check for it here: /usr/libexec/java_home -V
+
+# Note, you may need to add line(s) to your .bash_profile in Terminal...
+# From the command line I opened my bash profile with Textmate
+# > mate .bash_profile
+# And wrote the following lines into it:
+# export JAVA_HOME="/usr/libexec/java_home -v 1.8"
+# export LD_LIBRARY_PATH=$JAVA_HOME/jre/lib/server
+
+# Reconfigure R's Java paths, from Terminal:
+# > R CMD javareconf
+
+# Check on loading: 
+# > R --quiet -e 'library("rJava"); .jinit(); .jcall("java/lang/System", "S", "getProperty", "java.runtime.version")'
+
+# Gah. If still failing, load library explicity.
+# For me this involved cd-ing deep into the following path: 
+# /Library/Java/JavaVirtualMachines/jdk1.8.0_141.jdk/Contents/Home/jre/lib/server/libjvm.dylib
+
+# Paste that path into the following (back in R Studio now):
+# > dyn.load('/Library/Java/JavaVirtualMachines/jdk1.8.0_141.jdk/Contents/Home/jre/lib/server/libjvm.dylib')
+# then
+# > require(rJava)
+# > .jinit()
+# > .jcall("java/lang/System", "S", "getProperty", "java.runtime.version")
+# > sessionInfo()
+# > rJava should be loaded now...
+
+library("NLP")
+library("openNLP")
+library('rJava') #or uncomment and run the following four lines:
+# dyn.load('/Library/Java/JavaVirtualMachines/jdk1.8.0_141.jdk/Contents/Home/jre/lib/server/libjvm.dylib')
+# require(rJava)
+# .jinit()
+# .jcall("java/lang/System", "S", "getProperty", "java.runtime.version")
+
+ado<-tolower(ado)
+s <- as.String(ado)
+## Need sentence and word token annotations.
+sent_token_annotator <- Maxent_Sent_Token_Annotator()
+word_token_annotator <- Maxent_Word_Token_Annotator()
+a2 <- annotate(s, list(sent_token_annotator, word_token_annotator))
+pos_tag_annotator <- Maxent_POS_Tag_Annotator()
+pos_tag_annotator
+a3 <- annotate(s, pos_tag_annotator, a2)
+a3
+
+## Variant with POS tag probabilities as (additional) features.
+## head(annotate(s, Maxent_POS_Tag_Annotator(probs = TRUE), a2))
+
+## Determine the distribution of POS tags for word tokens.
+a3w <- subset(a3, type == "word")
+tags <- sapply(a3w$features, '[[', "POS")
+tags
+table(tags)
+
+# Extract token/POS pairs (all of them).
+adotagged<-sprintf("%s/%s", s[a3w], tags)
+
+# Paste the play back together. Redo bigram analysis.
+adotagpaste<-paste(adotagged,collapse=" ")
+adotagpastenoslash<-gsub("/","",adotagpaste) #I'm annoyed I have to do this. No way to escape the / below?
+taggedgrams<-textcnt(adotagpastenoslash,method="string",n=2,tolower=F)
+
+# Build and clean up data-frame
+taggedgrams.df<-data.frame(counts = unclass(taggedgrams), chars = nchar(names(taggedgrams)))
+taggedgrams.df$bigrams<-rownames(taggedgrams.df) #new column from row-names
+row.names(taggedgrams.df)<-NULL #throw away row-names
+taggedgrams.df<-taggedgrams.df[,c(3,1,2)] #reorder columns
+jjnnbigrams.df<-taggedgrams.df[grep(".+JJ .+NN",taggedgrams.df$bigrams),] #subset adj-noun bigrams
+
+# Clean up data-frame by removing tags with gsub
+adjnounpairs.df<-data.frame(lapply(jjnnbigrams.df,function(x){gsub("JJ|JJR|JJS|NN|NNS|NNP|NNPS","",x)}))
+adjnounpairsfinal.df<-adjnounpairs.df[order(adjnounpairs.df$counts,decreasing=T),]
+row.names(adjnounpairsfinal.df)<-NULL
+View(adjnounpairsfinal.df)
+
+# Grep for characters. Notice by-hand method works better. POS tagger is missing values.
+adjnounpairsfinal.df[grep(".+ Benedick",adjnounpairsfinal.df$bigrams),]
+adjnounpairsfinal.df[grep(".+ Beatrice",adjnounpairsfinal.df$bigrams),]
+adjnounpairsfinal.df[grep(".+ Claudio",adjnounpairsfinal.df$bigrams),]
+adjnounpairsfinal.df[grep(".+ John",adjnounpairsfinal.df$bigrams),]
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
