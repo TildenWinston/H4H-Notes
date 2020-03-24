@@ -236,10 +236,10 @@ html_attrs(cast)
 html_attr(cast, "class")
 
 # Trying the same with Lou's List (inspired by a Michele CLaibourn tutorial for StatLab)
-lous.english<-read_html("https://rabi.phys.virginia.edu/mySIS/CS2/page.php?Semester=1178&Type=Group&Group=English")
-nodes<-html_nodes(lous.english,".CourseNum")
-courses<-html_text(nodes)
-courses<-gsub("^\\s+","",courses)
+# lous.english<-read_html("https://rabi.phys.virginia.edu/mySIS/CS2/page.php?Semester=1178&Type=Group&Group=English")
+# nodes<-html_nodes(lous.english,".CourseNum")
+# courses<-html_text(nodes)
+# courses<-gsub("^\\s+","",courses)
 
 ############################################
 ############################################

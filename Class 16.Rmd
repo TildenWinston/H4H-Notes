@@ -1,0 +1,339 @@
+---
+title: "Class 16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Scraping
+2nd and 3rd question on the homework are web scraping questions
+
+twitter bot encouraged - or other similarly poetic things
+Auto generated poetry.
+
+First panopto video is up. 
+
+Twitter analysis is alright, but it needs to be literary. 
+
+Read Teju Cole, “A Reader’s War” (Collab) and “Seven Short Stories about Drones,” http://www.directory.eliterature.org/individual-work/4873
+
+0. https://twitter.com/tejucole/status/290873236516904960
+1. https://twitter.com/tejucole/status/290867008776597504
+2. https://twitter.com/tejucole/status/290867500151881728
+3. https://twitter.com/tejucole/status/290868089879416832
+4. https://twitter.com/tejucole/status/290868849077796864
+5. https://twitter.com/tejucole/status/290869171082903552
+6. https://twitter.com/tejucole/status/290869704984240129
+7. https://twitter.com/tejucole/status/290870071662891008
+
+Collected at https://twitter.com/i/events/854461877371289600?lang=en
+
+These tweets are the opening lines of novels mixed with sentences about drones/drone strikes
+
+20th century modernist works
+
+The new lines work well with the original lines, drawing in themes.
+
+
+New bots 
+Endless Screaming @infinite_scream
+Screams at varying frequency and with varying screams
+
+
+@LostTesla
+bots that express feelings
+This one is a Tesla that is being called. This one can't find it's owner
+Peotic at times
+Madlib like structures that are filled in by the program
+
+@Metaphorminute
+Mixes and matches literary terms
+
+@everyword
+all of the words in the english language
+
+@Horse_ebooks
+not actually a bot. Two people pretending to be a robot
+
+@pentametron
+Retweets couplets based on two tweets that are tweeted by others
+
+
+API acess has been clamped down on.
+
+tracery.io is a text generator
+
+## Getting down to R
+scraping using readlines. This works but it is messey. Very clumsey, grabs the entire HTML page.
+rvest can scrape HTML/XML
+
+
+CSS Diner
+
+flukeout.github.io
+css selector practice
+
+```{r Hacking16-Scraping.R}
+# Web Scraping and Building a Corpus, Twitter and Twitterature
+# March 24, 2020
+
+scanner<-function(filename){
+  library(stringr)
+  lines<-scan(filename,what="char",sep="\n")
+  words<-tolower(unlist(str_split(lines,boundary("word"))))
+  bagofwords<-words[which(words!="")]
+  return(bagofwords)
+}
+
+getwd()
+list.files()
+#scanner("TRY A TEXT FILE HERE")
+
+############################################
+
+# Scraping, the hard way...
+url2<-"http://www.gutenberg.org/files/1934/1934-h/1934-h.htm"
+tmp2 <- readLines(url2, warn = F)
+grep("\\<h3\\>",x = tmp2,value=T) # poem titles
+title.index <- grep("\\<h3\\>",x = tmp2) # indexing poem titles
+tmp2[title.index[3]]
+poem1<-tmp2[title.index[3]:(title.index[4]-1)]
+# gsub("<[a-z]")
+
+ # Now I have to grep out the tags... Ugh...
+
+############################################
+
+# It's much better to use a package that can parse XML/HTML
+library(rvest)
+
+library(magrittr) # not necessary but all the scraping tutorials like to use it with rvest...
+
+# Example from rvest documentation
+# magritter and piping are not used.
+movie <- read_html("https://www.imdb.com/title/tt0069398/fullcredits?ref_=tt_cl_sm#cast") # Godard's "Tout Va Bien"
+cast <- html_nodes(movie, "#fullcredits_content td:nth-child(2) a")
+html_text(cast)
+html_name(cast)
+html_attrs(cast)
+html_attr(cast, "class")
+
+nyt<-read_html("https://www.nytimes.com/section/todayspaper?redirect_uri=https%3A%2F%2Fwww.nytimes.com%2F")
+headlines<-html_nodes(nyt,".e1f68otr0")
+gsub("\n","",html_text(headlines))
+
+nyt2 <- read_html("https://www.nytimes.com/section/todayspaper?redirect_uri=https%3A%2F%2Fwww.nytimes.com%2F")
+headlines <- html_nodes(nyt2,"li h2")
+html_text(headlines)
+
+
+# Trying the same with Lou's List (inspired by a Michele CLaibourn tutorial for StatLab)
+lous.english<-read_html("https://louslist.org/page.php?Semester=1208&Type=Group&Group=English")
+nodes<-html_nodes(lous.english,".CourseNum span")
+courses<-html_text(nodes)
+courses<-gsub("^\\s+","",courses)
+
+############################################
+
+# Writing out all those lines can be avoided with a pipe operator.
+
+# Pipes pass stuff.
+
+# Will not be on the exam, but it is usefull.
+
+library(magrittr)
+
+"Ceci n'est pas un pipe" %>% nchar()
+"Ceci n'est pas un pipe" %>% gsub("un", "une", .) # using the dot as a placeholder
+
+"Ceci n'est pas un pipe" %>% gsub("un", "une", .) %>% nchar
+
+############################################
+
+# Practice with magrittr... Rewrite our scanner function. 
+
+scanner<-function(filename){
+  library(stringr); library(magrittr)
+  bagofwords<-scan(filename,what="char",sep="\n") %>%
+    str_split(boundary("word")) %>% unlist() %>% tolower() %>%
+    .[which(.!="")] # Again, when the LHS is needed at a position other than the first, use the dot ('.') as placeholder. 
+  return(bagofwords)
+}
+
+############################################
+
+# Real-Life Scraping
+# Brad Collecting Texts for Class
+# Example with Isaac Watts
+
+# Watts
+wattspage<-read_html("http://quod.lib.umich.edu/e/ecco/004819385.0001.000?rgn=main;view=fulltext")
+lines<-html_nodes(wattspage,"h4 , h3 , .line") %>% 
+  # %>% is the pipe operator, it feeds the result to the next function: html_text()
+  html_text() # That gets titles and lines. Assigning them, at start of this 
+  #chain, to lines
+
+# I suppose all this could be added to the pipeline... see below
+lines<-gsub("\\n"," ",lines) # clean up line breaks, see page image: http://quod.lib.umich.edu/e/ecco/004819385.0001.000/64
+lines<-c(lines,"END")
+
+# All in pipeline. Hadley Wickham would be so proud...
+# wattspage<-read_html("http://quod.lib.umich.edu/e/ecco/004819385.0001.000?rgn=main;view=fulltext")
+# lines<-html_nodes(wattspage,"h4 , h3 , .line") %>% 
+#   # %>% is the pipe operator, it feeds the result to the next function: html_text()
+#   html_text() %>% gsub("\\n"," ",.) %>% c("END")
+
+# Which of these lines are titles? (Looking in the object lines)
+# Zap some subtitles
+lines<-lines[-709] # not a title
+lines<-lines[-747] # not a title
+titles<-c(1,23,57,91,117,143,161,191,225,251,277,295,321,347,373,399,421,447,
+          473,499,517,539,573,591,609,627,645,663,681,692,709,734,747,768,787,804,829,857,898,915,972)
+
+
+# that's the wimpy way (I indexed titles by hand). Get the titles?
+titles.scraped.index<-html_nodes(wattspage,"h3")
+titles.scraped<-html_text(titles.scraped.index)
+titles.scraped 
+
+# initialize lists for loop
+poems.l<-list()
+poemspasted.l<-list()
+
+# loop through scraped data
+for(i in 1:length(titles)){
+  if(i < length(titles)){
+    title<-lines[titles[i]]
+    start<-titles[i]+1
+    end<-titles[i+1]-1
+    poem<-lines[start:end]
+    poempasted<-paste(poem,collapse="\n")
+    poems.l[[title]]<-poem
+    poemspasted.l[[title]]<-poempasted
+  }
+}
+
+filenames<-gsub("\\s|\\.|,|;", "",tolower(names(poemspasted.l)))
+
+# Write into files and leave on desktop in a folder
+dir.create("~/Desktop/watts")
+setwd("~/Desktop/watts")
+
+for(i in 1:length(filenames)){
+  wfile<-file(paste0(filenames[i],".txt"))
+  writeLines(poemspasted.l[[i]],wfile)
+  close(wfile)
+}
+
+############################################
+
+# More functions? 
+
+# This function extracts all the files from a directory (dir), turns them into bags of words, 
+# and puts each file's words into a list
+getcorpus<-function(dir,type=".txt"){
+  curr.folder<-getwd()
+  setwd(dir)
+  corpus<-list()
+  files<-list.files(pattern=type)
+  for(i in 1:length(files)){
+    text<-scan(files[i],what="char",sep="\n")
+    text<-paste(text,collapse=" ")
+    lowertext<-tolower(text)
+    text.words<-unlist(strsplit(lowertext,"\\W"))
+    text.words<-text.words[which(text.words!="")]
+    corpus[[files[i]]]<-text.words
+  }
+  setwd(curr.folder)
+  return(corpus)
+}
+
+############################################
+############################################
+
+# Cleaning up Blake: note this is not scraping, rather text processing. 
+# I already have the Blake file... But this is an example of cleaning up texts, writing them out as files
+
+setwd("~/projects/texts/blake")
+songs<-scan("blake-songs-all.txt",what="char",sep="\n")
+songs<-gsub("\\t","",songs)
+songs<-c(songs,"END")
+titles<-c(6,28,39,72,95,126,140,166,176,186,200,236,259,273,325,356,374,388,410,451,473,
+          501,515,534,589,645,660,670,680,703,721,748,757,766,773,787,805,824,850,860,878,
+          905,942,961,993,1007,1016)
+
+songs.l<-list()
+songspasted.l<-list()
+
+for(i in 1:length(titles)){
+  if(i < length(titles)){
+    title<-songs[titles[i]]
+    start<-titles[i]+1
+    end<-titles[i+1]-1
+    song<-songs[start:end]
+    songpasted<-paste(song,collapse="\n")
+    songs.l[[title]]<-song
+    songspasted.l[[title]]<-songpasted
+  }
+}
+
+filenames<-names(songspasted.l)
+
+# Write into files
+for(i in 1:length(filenames)){
+  wfile<-file(paste0(filenames[i],".txt"), "w")
+  writeLines(songspasted.l[[i]],wfile)
+  close(wfile)
+}
+
+#################################
+
+# Last example: Getting Jane Austen fan fiction
+
+# Build a "bits of ivory corpus": Emma rewrites
+
+urls<-c("http://www.pemberley.com/derby/oldc/kathyf1.htm","http://www.pemberley.com/derby/olde/rose1.htm","http://www.pemberley.com/derby/jimmy8.iada.html","http://www.pemberley.com/derby/oldb/kathy1.htm","http://www.pemberley.com/derby/oldc/laraine1.htm","http://www.pemberley.com/derby/oldc/martine1.htm","http://www.pemberley.com/derby/olda/susanc1.htm","http://www.pemberley.com/derby/olda/cass3.htm","http://www.pemberley.com/derby/aeliz2.htm","http://www.pemberley.com/derby/oldb/kat3.htm","http://www.pemberley.com/derby/olde/dee1.htm","http://www.pemberley.com/derby/olda/kali1.htm","http://www.pemberley.com/derby/kfay1.kd.html","http://www.pemberley.com/derby/deedee4.ew.html","http://www.pemberley.com/derby/ulrike.mds1.html","http://www.pemberley.com/derby/ulrike.lmu1.html","http://www.pemberley.com/derby/helena6.mr.html","http://www.pemberley.com/derby/sara-clare.cah.html","http://www.pemberley.com/derby/radhika.hsmsh.html","http://www.pemberley.com/derby/helena6.ahit.html")
+bitsofivory.l<-list()
+for(i in 1:length(urls)){
+  bit<-read_html(urls[i])
+  elements<-html_nodes(bit,"p")
+  text<-html_text(elements)
+  title<-text[1]
+  text<-gsub("Â© \\d{4} Copyright held by the author","",text) #remove copyright
+  text<-paste(text,collapse=" ")
+  lowertext<-tolower(text)
+  text.words<-unlist(strsplit(lowertext,"\\W"))
+  text.words<-text.words[which(text.words!="")]
+  bitsofivory.l[[title]]<-text.words
+}
+  
+  ############################################
+  
+  # It's no longer possible to do scraping exercise which used to be below, because the Blake Archive has 
+  # changed ... Although I suppose I could use the WayBack machine:
+  # Yup: https://web.archive.org/web/20150302225047/http://www.blakearchive.org/exist/blake/archive/erdman.xq?id=b1.5
+  
+  ## No longer a good URL below. Replace with link above and uncomment? -- The Archive has removed 
+  ## its flat web-page transcription of the Erdman edition. It's harder now to scrape!
+  
+  # url <- "http://www.blakearchive.org/exist/blake/archive/erdman.xq?id=b1.5#top"
+  # tmp <- readLines(url, warn = F)
+  # title.index <- grep("\\<h5\\>",x = tmp) # indexing poem titles
+  # poem1<-tmp[title.index[1]:(title.index[2]-1)] # first poem (but with markup)
+  
+
+
+############################################
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
