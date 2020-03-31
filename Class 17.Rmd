@@ -1,0 +1,247 @@
+---
+title: "Class 17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Start working and thinking about the project
+Get a head start now. Ideas are due on April 17th
+
+vector semantics
+
+logical control structures
+
+if(_){}else{}
+return() - returns values from a function
+
+J. R. Firth - Linguist
+
+They were mostly looking at meaning as known from the surrounding words
+
+Corpus linguistics
+-brute force words in context
+
+The trick is finding colocates
+
+KWICS Keyword in context concordance
+
+## Moving to blake
+
+Blake resists indexing
+
+Human Abstract - The bearded man is the basement programmmer - Riley Creamer
+
+Tension between what we can do in R and what we can do with our brain
+
+
+Collocated words -> the words before and after an index
+Building a set of collocates
+
+```{r }
+songs <- scan("blake-songs-all-clean.txt", "char", sep ="\n")
+songs <- songs[-(1:6)] #Negative ask for everything but the first six lines
+library(stringr)
+songs.words <- unlist(str_split(songs, boundary("word")))
+
+# MAKE A FUNCTION: collocator
+# LRspan is the window we are looking at
+
+
+# Kind of broken
+colloc1 <- function(target.kw, text.words, LRspan){
+  # get the keyword positions
+  target.index <- which(tolower(text.words) == tolower(target.kw))
+  collocates <- c()
+      for(i in 1:length(target.index)){
+        
+        if(i > LRspan){
+          LHS <- text.words[(target.index[i] - LRspan):target.index[i]] # (target.index[i] - 1 for ending index causes a bug later.)
+        }
+        else{
+          LHS <- text.words[1:target.index[i]]
+        }
+        
+        
+        
+        if(i + LRspan  <= length(text.words)){
+          RHS <- text.words[target.index[i]:(target.index[i] + LRspan)]
+        }
+        else{
+          RHS <- text.words[target.index: length(text.words)]
+        }
+        
+        collocates <- c(collocates, LHS[-length(LHS)], RHS[-1])
+        
+      }
+  #Grab to the left
+  #Grab to the right
+  #Collect the window's collates
+  # Return them
+  return(table(tolower(collocates)))
+}
+
+temp <- colloc1("father", songs.words, 4)
+
+```
+
+
+```{r Hacking18-KWIC.R}
+# Hacking for Humanists
+# March 31, 2020
+
+# Collocation: "You shall know a word by the company it keeps!"
+
+setwd("~/projects/hack/blake")
+songs<-scan("blake-songs-all-clean.txt",what="char",sep="\n")
+songs.words<-unlist(strsplit(songs,"\\s")) # when concordancing, we may want to keep punctuation
+
+#better?
+library("stringr")
+songs.words<-unlist(str_split(songs,boundary("word")))
+
+# Building a Collocator (this one breaks)
+colloc1<-function(target.kw,text.words,LRspan){
+  target.index<-which(tolower(text.words)==tolower(target.kw))
+  cat("The word",target.kw,"appears",length(target.index),"times\n")
+  collocates<-NULL
+  for(i in 1:length(target.index)){
+    LHS<-text.words[(target.index[i]-LRspan):target.index[i]]
+    RHS<-text.words[target.index[i]:(target.index[i]+LRspan)]
+    collocates<-c(collocates,LHS[-length(LHS)],RHS[-1])
+  }
+  return(table(tolower(collocates)))
+}
+
+# A collocator that doesn't break (I think!)
+colloc<-function(target.kw,text.words,LRspan){
+  target.index<-which(tolower(text.words)==tolower(target.kw))
+  cat("The word",target.kw,"appears",length(target.index),"times\n")
+  collocates<-NULL
+  for(i in 1:length(target.index)){
+    if((target.index[i]-LRspan)<1){
+      LHS<-text.words[1:target.index[i]]
+    }else{
+      LHS<-text.words[(target.index[i]-LRspan):target.index[i]]
+    }
+    if((target.index[i]+LRspan)>=length(text.words)){
+      RHS<-text.words[target.index[i]:length(text.words)]
+    }else{
+      RHS<-text.words[target.index[i]:(target.index[i]+LRspan)]
+    }
+    collocates<-c(collocates,LHS[-length(LHS)],RHS[-1])
+  }
+  return(table(tolower(collocates)))
+}
+
+###########################################################
+
+# Kwicking (for Thursday)
+
+# set for testing
+target.kw="innocence"
+text.words=songs.words
+
+# Mark Algee-Hewitt's KWICker (tweaked and commented by Brad)
+kwic<-function(target.kw, text.words, LRspan){
+  #find places in text.words where target.kw can be found
+  #target.index<-which(text.words==target.kw) #control for casing below
+  target.index<-grep(tolower(target.kw),tolower(text.words))
+  if(length(target.index)==0){return("No match")}
+  #create empty variable
+  target.kwics<-NULL
+  #loop that repeats for all incidents of keyword in text
+  for (i in 1:length(target.index)){
+    #check to make sure, we're in bounds
+    if (target.index[i]-LRspan<1){
+      start<-1
+    } else {
+      start<-target.index[i]-LRspan
+    }
+    if (target.index[i]+LRspan>length(text.words)){
+      end<-length(text.words)
+    }else{
+      end<-target.index[i]+LRspan
+    }
+    #grab chunk
+    text.chunk<-text.words[start:end]
+    #collapse chunk to a single variable, separated by spaces
+    text.chunk<-paste(text.chunk, collapse=" ")
+    #add chunk to vector of chunks
+    target.kwics<-c(target.kwics, text.chunk)
+  }
+  #return complete vector of text chunks
+  return(target.kwics)
+}
+
+
+#####################################################
+
+# A final function: get a corpus into R
+
+blakedir<-"/Users/bradpasanek/projects/hack/blake/songstitled"
+filenames<-dir(blakedir)
+
+filepath<-"~/projects/hack/blake/songstitled"
+# Quickly list files in a directory:
+files.v<-dir(filepath,"\\.txt$") # Jockers' way
+files.v<-list.files(filepath) # Why not this way?
+
+# Or use a built-in function?
+list.files(pattern='.txt')
+list.files(pattern='.txt',recursive=T)
+dir(blakedir)
+
+# Write a function?
+showfiles<-function(filenames){
+  for(i in 1:length(filenames)){
+    cat(i,filenames[i],"\n",sep=" ")
+  }
+}
+
+# Convert files into bags of words:
+# Jockers' Way
+makecorpus<-function(files,directory){
+  text.words.l<-list()
+  for(i in 1:length(files)){
+    text<-scan(paste(directory,files[i],sep="/"),what="char",sep="\n")
+    text<-paste(text,collapse=" ")
+    lowertext<-tolower(text)
+    text.words<-unlist(strsplit(lowertext,"\\W"))
+    text.words<-text.words[which(text.words!="")]
+    text.words.l[[files[i]]]<-text.words
+  }
+  return(text.words.l)
+}
+
+# Brad's way (Again, borrowing from Mark Algee-Hewitt)
+getcorpus<-function(dir,type=".txt"){
+  curr.folder<-getwd()
+  setwd(dir)
+  corpus<-list()
+  files<-list.files(pattern=type)
+  for(i in 1:length(files)){
+    text<-scan(files[i],what="char",sep="\n")
+    text<-paste(text,collapse=" ")
+    lowertext<-tolower(text)
+    text.words<-unlist(strsplit(lowertext,"\\W"))
+    text.words<-text.words[which(text.words!="")]
+    corpus[[files[i]]]<-text.words
+  }
+  setwd(curr.folder)
+  return(corpus)
+}
+
+# Add these three functions to your myRTools.R file:
+# colloc()
+# kwickr()
+# getcorpus()
+
+# Note, you might improve them as we go by adding the following:
+# if(length(target.index)==0){
+# warning("No match")}
+
+
+```
