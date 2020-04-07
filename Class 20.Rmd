@@ -1,0 +1,279 @@
+---
+title: "Class 20"
+output: html_document
+---
+
+
+## EMMA Starting today
+
+Looking only at the first paragraph
+
+Explaining the notation on the syllabus, 
+
+I.1 - Volume 1, Chapter 1
+I.18 - Volume 1, Chapter 18
+
+We will be doing both Blake and Emma at the same time.
+  
+## Sentiment analysis
+There are different ways to attack the problem, we can use dictionaries, can use different dictionaries with different wieghtings
+
+For final, credit will be given for what you are good at.
+
+Circular graph representing sentiment of the bible.
+
+Sentiment dictionaries are hard to make because they take a lot of time.
+
+ANEW dictionary
+AFINN dictionary - has lots of modern jargon and cursewords, made for twitter, free
+General Inquirer List - Harvard, has more tags
+Moral Foundations Dictionary - Made a UVA, has more categories (loyalty, caring,)
+
+Twitter - quickly trying to gage the temperature. Twitter is happy or sad. Then looking for correlation to markets or for advertising.
+Robots telling robots to buy things.
+
+Irony and sarchasm often cause issues for sentiment analysis.
+
+
+Today we will work from a sript
+```{r Hacking20-SentimentAnalysis.R}
+# Hacking Class 18: Sentiment Analysis
+# April 6, 2020
+
+# Credit where due: some of this code (the Lou's List exercise!) is drawn from Michele Claibourn's R class that I sat in on here at UVa a few years ago!
+
+# Some installs
+# install.packages("dplyr")
+# install.packages("gtools")
+
+# AFinn Dictionary, named after its creator Finn Ã…rup Nielsen. 
+# AFINN is a list of English words rated for valence with an integer
+# between minus five (negative) and plus five (positive). The words have
+# been manually labeled by Finn Ã…rup Nielsen in 2009-2011. The file
+# is tab-separated. We're using the newest version: AFINN-111, 2477 words and phrases.
+
+# Set up dictionary
+dict<-read.delim("sentanalysis/AFINN-111.txt", header=FALSE, stringsAsFactors=FALSE) # reads a tab-separated file into adataframes
+names(dict) <- c('word', 'weight')
+View(dict)
+
+# getcorpus should be Rtools.R -- We looked it over yesterday (see notes for Hacking16)
+source("RTools.R") #or use your myRTools.R file I sent you a while back
+# If you can't find it, I also pasted it in at the bottom of this script.
+
+blakecorpus.l<-getcorpus("songstitled")
+str(blakecorpus.l)
+```
+
+dict$word - gets all of the words in the column
+
+length of the poems may have an impact on scoring
+
+Sentiment analysis with context clues could be an interesting project
+
+```{r }
+
+# Words Scored
+dict[which(dict$word %in% blakecorpus.l[[3]]),] # Innocence: A Cradle Song
+dict[which(dict$word %in% blakecorpus.l[[18]]),] # Experience: The Little Girl Found
+dict[which(dict$word %in% blakecorpus.l[[30]]),] # Experience: The Little Vagabond
+
+found<-dict[which(dict$word %in% blakecorpus.l[[18]]),]
+sum(found$weight)
+
+cradle.df<-dict[which(dict$word %in% blakecorpus.l[[3]]),]
+sum(cradle.df$weight) # returns 23
+
+# Score some other poems
+sweep.df<-dict[which(dict$word %in% blakecorpus.l[["26-exp-thechimneysweeper.txt"]]),]
+sum(sweep.df$weight) # -1
+# but this is complicated. In fact, there's a lot of sentiment in this poem.
+sum(subset(sweep.df, weight<0)[,2]) # negatives: -11
+sum(subset(sweep.df, weight>0)[,2]) # positives: 10
+# let's think harder about this..
+
+lamb.df<-dict[which(dict$word %in% blakecorpus.l[["4-inn-thelamb.txt"]]),]
+sum(lamb.df$weight) 
+
+tyger.df<-dict[which(dict$word %in% blakecorpus.l[["31-exp-thetyger.txt"]]),]
+sum(tyger.df$weight) 
+```
+
+The following function generalizes the sentiment analysis making it easier so we don have to go through the process with all poems
+```{r}
+# A new function to calculate weights for docs (can be applied across corpuslist). 
+# Expects texts as bags of words.
+get_sentiment_afinn <- function(bagofwords){
+  result <- sum(dict[which(dict$word %in% bagofwords), "weight"])
+  return(result)
+}
+
+# Apply the function to the list of texts to get scores
+songs.df<-data.frame(sort(sapply(blakecorpus.l,get_sentiment_afinn))) # Note, sorts most negative to least
+songs.df
+
+```
+
+## dplyr
+dplyr makes things a little bit easier when working with data
+pandas in python
+
+## gtools
+has a function that organizes texts in human order
+helps with cleaning up data frames
+
+## songs of experience
+Are songs of experience less positive or more negative
+
+Dictionaries are cheap and easy, semantics are hard.
+
+```{r }
+# Make it prettier? 
+# (Using package called dplyr's add_rownames function, which is faster than copying and deleting rownames.)
+library("dplyr")
+library("gtools")
+songs.df<-add_rownames(songs.df,"poem") # deprecated?
+colnames(songs.df)[2]<-"AFINNscore"
+songsinorder.df<-songs.df[mixedorder(songs.df$poem),] #requires mixedorder() {gtools}
+View(songsinorder.df)
+
+mean(songsinorder.df$AFINNscore[1:18]) #6.5
+mean(songsinorder.df$AFINNscore[19:45]) # -2.18
+# Songs of Innocence are positive, Songs of Experience are Negative. Well, ok.
+
+plot(rownames(songsinorder.df),songsinorder.df$AFINNscore,
+     type="h",
+     xaxt="n",
+     xlab="",
+     ylab="AFINN Sentiment Score: Blake's Songs")
+lablist<-gsub(".txt","",songsinorder.df[['poem']])
+lablist<-gsub("[0-9]+-[a-z]+-","",lablist)
+text(x=1:46,par("usr")[3] - 6,labels = lablist,srt=90,pos=1,offset = .1,xpd=T,cex=.5)
+
+#####################################################################
+```
+
+```{r }
+
+# 3. This bit of script borrowed from Michele Claibourn's "Text as Data" class and lightly edited
+
+# library("magrittr")
+# library("dplyr")
+# 
+# # Read in downloaded list
+# lou1<-read.csv("courses1152Data.csv") 
+# lou1$number <- as.factor(lou1$Number) # make a new variable containing course number as factor for grouping
+# lou1.u <- lou1 %>%   # keep only one record per course (i.e., get rid of "sections/labs" for primary course)
+#   group_by(Mnemonic, number) %>% 
+#   summarize(sections=n(), students=sum(Enrollment), level=first(Number),
+#             title=as.character(first(Title)), 
+#             description=as.character(first(Description)))
+# lou1.u <- as.data.frame(lou1.u)
+# # Remove columns that end up empty (from my exploration of the data)
+# lou1.u <- lou1.u[-c(42,144,956,979,980,1016,1222,1223,1882,2220,2273,2503,2591,2798,2839,2860,2949,2974),]
+# # Make separate datasets for graduate and undergraduate courses
+# g.lou1 <- subset(lou1.u, level>=5000)
+# u.lou1 <- subset(lou1.u, level<5000)
+# 
+# View(u.lou1)
+# # create a function to score sentiment for each course/doc -- add processing back in
+# get_sentiment <- function(docs){
+#   docs <- gsub("[[:punct:]]", "", docs) 
+#   docs <- gsub("\\d+", "", docs) 
+#   docs <- tolower(docs) 
+#   wordList <- strsplit(docs, '\\s+')
+#   words <- unlist(wordList)
+#   result <- sum(dict[which(dict$word %in% words), "weight"]) # still using AFINN dictionary
+#   return(result)
+# }
+# 
+# # apply the function to the descriptions
+# scores <- sapply(g.lou1$description, get_sentiment)
+# hist(scores)
+# table(scores)
+# summary(scores)
+# 
+# # add sentiment score to data frame for plotting
+# g.lou1$sent <- scores
+# head(g.lou1)
+# 
+# # most "positive" descriptions in graduate schools (GBUS wins). I got similar results with undergrad: COMM and ARCH
+# subset(g.lou1, sent >= 13, select=c(sent, Mnemonic, level, description))
+# # most "negative" descriptions in graduate schools (GCOM on fraud, LAW). Similar with undergrad: SOC but also BIOL
+# subset(g.lou1, sent <= -7, select=c(sent, Mnemonic, level, description))
+# 
+# # Average sentiment by dept
+# g.sent <- g.lou1 %>% 
+#   group_by(Mnemonic) %>% 
+#   summarize(meanSent = mean(sent)) %>% 
+#   arrange(desc(meanSent))
+# head(g.sent, 10)
+# tail(g.sent, 10)
+# 
+# 
+# #########
+# 
+# #I'm rerunning for Fall English courses:
+# lou2<-read.csv("English1178Data.csv")
+# lou2$number <- as.factor(lou2$Number) # course number as factor for grouping
+# lou2.u <- lou2 %>%   # keep only one record per course (i.e., get rid of "sections/labs" for primary course)
+#   group_by(Mnemonic, number) %>% 
+#   summarize(sections=n(), students=sum(Enrollment), level=first(Number),
+#             title=as.character(first(Title)), 
+#             description=as.character(first(Description)))
+# lou2.u <- as.data.frame(lou2.u)
+# View(lou2.u) # no empty columns...
+# 
+# # apply the function to the descriptions
+# scores2 <- sapply(lou2.u$description, get_sentiment)
+# hist(scores2)
+# table(scores2)
+# summary(scores2)
+# 
+# # add sentiment score to data frame for plotting
+# lou2.u$sent <- scores2
+# head(lou2)
+# 
+# # most "positive" descriptions 
+# subset(lou2.u, sent >= 4, select=c(sent, Mnemonic, level, description))
+# # most "negative" descriptions 
+# subset(lou2.u, sent <= -2, select=c(sent, Mnemonic, level, description))
+# 
+# ################################################################
+# 
+# # Function for importing text files:
+# getcorpus<-function(dir,type=".txt"){
+#   curr.folder<-getwd()
+#   setwd(dir)
+#   corpus<-list()
+#   files<-list.files(pattern=type)
+#   for(i in 1:length(files)){
+#     text<-scan(files[i],what="char",sep="\n")
+#     text<-paste(text,collapse=" ")
+#     lowertext<-tolower(text)
+#     text.words<-unlist(strsplit(lowertext,"\\W"))
+#     text.words<-text.words[which(text.words!="")]
+#     corpus[[files[i]]]<-text.words
+#   }
+#   setwd(curr.folder)
+#   return(corpus)
+# }
+
+################################################################
+
+# # Create a Blake Corpus with tm
+# library("tm")
+# songs<-Corpus(DirSource("songstitled"))
+# songs<-tm_map(songs,stripWhitespace)
+# songs<-tm_map(songs,content_transformer(tolower))
+# songs<-tm_map(songs,removePunctuation)
+# 
+# # Get the words out of tm corpus
+# unlist(strsplit(songs[[2]]$content,"\\s"))
+# 
+# ##### Wait, this is more work than it should be!!! #######
+
+# It's simpler in many ways to work with our own functions!
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
