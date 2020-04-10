@@ -1,0 +1,138 @@
+---
+title: "Class 21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Multi dimensional spaces
+Lots and lots of dimensions
+
+5 moral foundations
+Yourmorals.org
+* Harm
+* Fairness
+* Loyalty
+* Authority
+* Purity
+
+Or Ingroup as an alternative to loyalty
+
+
+Looking at these foundations applied to corpus's of text.
+
+Each foundation has a dictionary
+
+Could also do other foundations
+- sweet, sour
+
+Hardest part is always just getting a dictionary
+
+Can start a dictionary using a thesaurus
+
+## Sarcasm is still an issue
+
+It is hard to find mechanically
+Usually a part of speech acts, hard even for humans in text
+
+Irony is similar
+
+## Yes yes, No no book
+Book only contains words yes and no. Book is two dimensional
+
+More words -> more dimensions
+
+Today we will look at the angle between two texts 
+Next week we will think about distance
+
+Tally of texts
+Yes Yes, No No - Petriceili | Yes: 24 | No: 24
+Peonelope Section - Ulysses - Joyce | Yes: 94 | No: 62
+Phone Call | Yes: 10 | No: 4
+
+## Cosign Similarity
+
+Distance between YYNN and Ulysses is large, but their angle is close together
+
+Cosign similarty does well with texts of different lengths
+
+Math and English and Physics?!? Yes.
+
+The reason we are using cosign is due to its special property, bigger theta gets, smaller the score. Bouncing between 0-1 for our cosign scores
+Theta of 90 - Cosign = 0
+
+Can also do cosign similarity on coolocation vectors
+
+
+sim(d, d) = (V(d1) * V(d2))/(|V(d1)||V(d2)) 
+
+## Texts are spacial??
+
+## On to the script
+toy.tdm, not toy.dtm
+Term document matrix, not document term matrix
+
+How to deal with lots of zeros
+- next week we will deal more with it
+
+
+Cosign score = (24 * 94 + 24 * 62)/(sqrt(94^2 + 62^2) sqrt(24^2 + 24^2))
+
+
+```{r Hacking21-Cosine.R}
+# Cosine Similarity and PCA analysis
+
+# The Cosine Distance Formula 
+# (Similarity and Distance as Complements! 1 - similarity = distance)
+
+# Example with Toy Texts
+thebarkingdog<-"The dog barked at a black cat. The cat hissed."
+themewlingcat<-"First the cat hissed at me. She then mewled and drank the cold milk I had set out."
+amonkey<-"A monkey climbed the mahogany tree. It hissed and threw its feces at passersby."
+asetting<-"It was cold. The wind hissed in the branches of the yew tree."
+zoostory<-"The monkey rode the horse to the center of the zoo. A black dog and a cat were posted as sentries by the rose tree."
+asergeant<-"After the sergeant barked orders at the cold sentries, she thought, 'What am I doing?'"
+beckett<-"What am I doing, talking, having my figments talk, it can only be me."
+forster<-"The king died on a ventilator. The queen died of grief."
+stein<-"Color mahogany center. Rose is a rose is a rose is a rose. Yew dew yew."
+listofcharacters<-"A dog, a cat, a monkey, the passersby, the sergeant herself, mr. beckett, rose, a king and queen."
+
+# Make a corpus object (pull the same texts in from files)
+toycorp.l<-getcorpus("toytexts")
+str(toycorp.l)
+toywords<-unique(unlist(toycorp.l))
+toytables.l<-lapply(toycorp.l,table)
+toy.tdm<-sapply(toytables.l,'[',toywords)
+toy.tdm[is.na(toy.tdm)]<-0
+rownames(toy.tdm)<-toywords
+
+# cosine in the package lsa will also calculate: crossprod(x, y)/sqrt(crossprod(x) * crossprod(y)))
+# Or roll your own function to calculate the same:
+cosinesim<- function(x,y){x %*% y/sqrt(x %*% x * y %*% y)}
+cosinesim(toy.tdm[,1], toy.tdm[,2])
+
+cosineDist <- function(x,y){1 - (x %*% y)/(sqrt(x %*% x * y %*% y))} # complement
+cosineDist(toy.tdm[,1],toy.tdm[,2])
+
+# Do it with a package? 
+#install.packages("lsa")
+# cosine or cosinesim
+library(lsa)
+colnames(toy.tdm)
+cosine(toy.tdm[,3],toy.tdm[,9]) # comparing asetting.txt and amewlingcat.txt
+cosine(toy.tdm[,4],toy.tdm[,2]) # comparing beckett.txt and a sergeant.txt
+View(cosine(toy.tdm))
+
+# Some Applications:
+# Document similarity: http://fredgibbs.net/tutorials/document-similarity-with-r.html
+# Song recommendations: https://bgstieber.github.io/post/recommending-songs-using-cosine-similarity-in-r/
+
+# Want to go much deeper into vector semantics? 
+# Start by reading  https://web.stanford.edu/~jurafsky/slp3/15.pdf
+# # Or the deeper dive: Ben Schmidt: http://bookworm.benschmidt.org/posts/2015-10-25-Word-Embeddings.html#fn2
+# Try Ben's package: https://github.com/bmschmidt/wordVectors
+
+```
+
