@@ -1,0 +1,453 @@
+---
+title: "Class 23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Statistics and high dimensionality
+
+Principle Component Analysis
+
+This will NOT be on the exam
+
+Paper proposal by tomorrow, just a page, doesn't have to be super polished
+Just give a brief sense of it.
+Can try a more narrative mode, what you did, what you learned
+
+Basic rubric has been sent out.
+
+## FID
+D. A. Miller on FID
+"Narration comes as near a character's psychic and linguistic reality as it can without collapsing into it, and the character does as much of the work of narration as she may without acquiring its authority."
+
+John Burrows
+
+## DIMENSIONS
+We are looking at high dimensional spaces
+There are reasons to reduce dimensionality
+
+Shining/projecting a high dimensional object to fewer dimensions, shining a light on a 3D object to display it on a flat surface
+
+looking a graph from NYT article
+https://www.nytimes.com/2017/07/06/upshot/the-word-choices-that-explain-why-jane-austen-endures.html?smid=pl-share
+
+
+
+## Easy to look at taste
+
+Thinking like a heptathalon
+
+Today we will look at scotch, but you can also use wine or other things.
+
+
+
+```{r Hacking23-PCA.R}
+# Principle Component Analysis
+# April 16, 2020
+
+# Reading for today: https://nyti.ms/2tR39sG
+
+# For more on PCA, see James, Witten, Hastie, and Tibshirani's
+# "An Introduction to Statistical Learning" (Springer, 2013)
+# It has a good secion on PCA!
+# PDF at http://www-bcf.usc.edu/~gareth/ISL/ISLR%20First%20Printing.pdf
+# Read Chapter 6.3.1 under "Dimension Reduction Methods"
+
+################################
+# Introduction to PCA
+
+# This example borrowed from Michelle Claibourn of the UVa Statlab
+# Description of Scotch Whisky data: 
+# https://www.mathstat.strath.ac.uk/outreach/nessie/nessie_whisky.html
+
+whisky <- read.csv("whiskies.txt", row.names = 1) # download "whiskies.txt" from URL above and read it in
+head(whisky)
+summary(whisky) # ignore first 8 (rather 80 rows): concentrate on characteristics
+summary(whisky[,2:13]) # that's better
+View(summary(whisky[,2:13]))
+
+# Correlations? 
+cor(whisky[,4],whisky[,6]) # smoky flavors appear with tobacco flavors?
+cor(whisky[,3],whisky[,4]) # smoky with sweet?
+cor(whisky[,2:13])
+
+```
+
+Principle component analysis works with varience, not correlation
+
+Less varience as the components increas, we really only need first two columns.
+
+Tries to capture as much varience as possible
+
+https://setosa.io/ev/principal-component-analysis/
+
+
+
+```{r}
+
+# Plot whiskies along principal components axes
+whisky.pca <- prcomp(whisky[,c(2:13)], scale=TRUE) #scale probably matters more with text of different lengths
+summary(whisky.pca) # look at the principal components or "loadings"
+plot(whisky.pca$x[,1:2]) # plot first two principal components
+identify(whisky.pca$x[,1:2], labels = whisky$Distillery,cex=.7) # Attach lables to dots, select the points, click finish.
+biplot(whisky.pca,cex=.4) # Shows how dimentions were smashed, more than 20 dimensions, things break
+
+```
+
+```{r }
+################################
+
+# Trying with Austen, Richardson, Fielding, and Burney
+
+#setwd("~/projects/hack/PCA")
+list.files("PCA/")
+
+austen<-scan("PCA/austen-emma.txt",what="char",sep="\n")
+richardson<-scan("PCA/richardson-clarissa.txt",what="char",sep="\n") # Father of the novel
+fielding<-scan("PCA/fielding-tomjones.txt",what="char",sep="\n") # Father of the novel
+burney<-scan("PCA/burney-evelina.txt",what="char",sep="\n") # Mix of fielding and richardson
+
+#underscores!
+austen <- gsub("_","", austen)
+richardson <- gsub("_","", richardson)
+fielding <- gsub("_","", fielding)
+burney <- gsub("_","", burney)
+
+novels<-list(austen,richardson,fielding,burney)
+sapply(novels,length)
+
+# Text segmenting, using grep to find major text divisions:
+grep("Volume ",austen,value=T) # can I break up into 3 vols?
+grep("Volume ",austen) # 4, 992, 2017 -- length is 3141
+grep("Volume ",richardson,value=T) 
+grep("Volume ",richardson) # 5  9525 18818 27948 37307 46769 56058 65666 74966
+grep("^BOOK ",fielding,value=T)
+grep("^BOOK ",fielding) # 136  1474  2671  3721  5501  7363  9077 11349 14161 15291 16670 18372 20404 22132 23562 25191 26595 27895
+grep("Holborn, June 18th.",burney) #7039, begin of vol II at 7038
+length(burney) #14195
+```
+Text segmentation
+
+How to get text "chunks"
+
+```{r }
+# EMMA: 4, 992, 2017 -- length is 3141 
+emma1<-austen[4:991]
+emma2<-austen[992:2070]
+emma3<-austen[2071:3141]
+# CLARISSA: 5  9525 18818 27948 37307 46769 56058 65666 74966 -- length is 83984
+clarissa1<-richardson[5:9524]
+clarissa2<-richardson[9525:18817]
+clarissa3<-richardson[18818:27947]
+clarissa4<-richardson[27948:37306]
+clarissa5<-richardson[37307:46768]
+clarissa6<-richardson[46769:56057]
+clarissa7<-richardson[56058:65665]
+clarissa8<-richardson[65666:74965]
+clarissa9<-richardson[74966:83984]
+# TOM JONES: # 136  1474  2671  3721  5501  7363  9077 11349 14161 15291 16670 18372 20404 22132 23562 25191 26595 27895 -- length is 
+tomjones1<-fielding[136:3720]
+tomjones2<-fielding[3721:9076]
+tomjones3<-fielding[9077:15290]
+tomjones4<-fielding[15291:20403]
+tomjones5<-fielding[20404:25190]
+tomjones6<-fielding[25191:30201]
+# EVELINA 
+evelina1<-burney[1:7037]
+evelina2<-burney[7038:14195]
+
+# bind those all up into a list of volumes:
+volumes.l<-list(emma1,emma2,emma3,
+                clarissa1,clarissa2,clarissa3,clarissa4,clarissa5,clarissa6,clarissa7,clarissa8,clarissa9,
+                tomjones1,tomjones2,tomjones3,tomjones4,tomjones5,tomjones6, 
+                evelina1,evelina2)
+str(volumes.l)
+names(volumes.l)<-c(paste0("emma",1:3),
+                    paste0("clarissa",1:9),
+                    paste0("tomjones",1:6),
+                    paste0("evelina",1:2))
+
+# a function for turning texts into bags of words
+library("stringr")
+wordbagger<-function(novel){ # this function requires stringr!
+  novel<-tolower(unlist(str_split(novel,boundary("word"))))
+  return(novel)
+}
+
+# Apply the function to the list of segmented novels.
+volumes.bagsofwords.l<-lapply(volumes.l,wordbagger)
+str(volumes.bagsofwords.l)
+
+# What are the words used in these novels?
+thewords<-unique(unlist(volumes.bagsofwords.l))
+thewords<-sort(thewords,decreasing=F)
+length(unlist(volumes.bagsofwords.l)) # words in corpus: 1633178
+length(thewords) # unique words in corpus: 24948
+
+# Table the bags of words, preparing to make a TDM
+
+#volumes.bagsofwords.t.l<-lapply(volumes.bagsofwords.l,table) # try raw counts?
+volumes.bagsofwords.t.l<-lapply(volumes.bagsofwords.l,function(x){table(x)/sum(table(x))})
+
+# Test?
+sapply(volumes.bagsofwords.t.l,'[',"tom")
+str(thewords)
+class(thewords)
+
+# Do all the words
+vols.tdm<-sapply(volumes.bagsofwords.t.l,'[',thewords) # this takes a while!
+rownames(vols.tdm)<-thewords
+vols.tdm[which(is.na(vols.tdm))]<-0
+View(vols.tdm)
+dim(vols.tdm)
+
+# Transpose the TDM, make it a DTM
+vols.dtm<-t(vols.tdm) #
+View(vols.dtm)
+
+# Principle Component Analysis
+vols.pca<-prcomp(vols.dtm)
+scaled.pca<-prcomp(vols.dtm, scale=T) # scaling (because texts of different length)
+
+# See the loadings:
+scaled.pca$rotation
+# Try screeplot() to see how quickly these loadings fall off:
+screeplot(scaled.pca)
+
+# Plot the PCAs
+plot(vols.pca$x[,1:2])
+#identify(vols.pca$x[,1], vols.pca$x[,2], labels = rownames(vols.dtm),cex=.7)
+biplot(vols.pca,cex=.7)
+
+# or... 
+plot(scaled.pca$x[,1:2])
+#identify(scaled.pca$x[,1:2], labels = rownames(vols.dtm),cex=.7)
+biplot(scaled.pca,cex=.4)
+```
+Lots of overlap
+
+Issac Watts and Blake both  "A Cradle Hymm" and "A cradle song" are very similar as we will see.
+```{r}
+################################
+# Blake and Watts
+
+blakecorpus.l<-getcorpus("songstitled")
+wattscorpus.l<-getcorpus("watts")
+blakewords<-unlist(blakecorpus.l)
+wattswords<-unlist(wattscorpus.l)
+songwords<-sort(unique(c(blakewords,wattswords)),decreasing=F)
+blaketables.l<-lapply(blakecorpus.l,table)
+wattstables.l<-lapply(wattscorpus.l,table)
+songtables.l<-c(blaketables.l,wattstables.l) # you can use c() on lists!
+song.tdm<-sapply(songtables.l,'[',songwords)
+song.tdm[is.na(song.tdm)]<-0
+rownames(song.tdm)<-songwords
+song.dtm<-t(song.tdm)
+dim(song.dtm)
+View(song.dtm)
+
+# Principle Component Analysis
+song.pca<-prcomp(song.dtm)
+scaled.pca<-prcomp(song.dtm, scale=T) # scaling (because texts of different length)
+
+# See the loadings:
+scaled.pca$rotation
+# Try screeplot() to see how quickly these loadings fall off:
+screeplot(scaled.pca)
+
+# Plot the PCAs
+plot(song.pca$x[,1:2],)
+#identify(song.pca$x[,1], song.pca$x[,2], labels = rownames(song.dtm),cex=.7)
+biplot(song.pca,cex=.7)
+# or... 
+plot(scaled.pca$x[,1:2])
+#identify(scaled.pca$x[,1:2], labels = rownames(vols.dtm),cex=.7)
+biplot(scaled.pca,cex=.4)
+
+# Color-Code: Blake vs. Watts
+rownames(song.dtm) # 1:46 is Blake, 47:85 is Watts
+dim(song.dtm)
+blake.pca<-prcomp(song.dtm[1:46,1:dim(song.dtm)[2]])
+watts.pca<-prcomp(song.dtm[47:85,1:dim(song.dtm)[2]])
+plot(blake.pca$x[,1], blake.pca$x[,2],pch=19,cex=.5,col="red") # plot Blake
+points(watts.pca$x[,1], watts.pca$x[,2], pch=2,cex=.5,col="blue") # plot Watts
+
+identify(blake.pca$x[,1:2], labels = rownames(song.dtm[1:46,]),cex=.7)
+identify(watts.pca$x[,1:2], labels = rownames(song.dtm[47:85,]),cex=.7)
+
+
+#########################################################################################
+
+# Try the same with the tm package?
+# Can we do this sort of thing with some toy texts?
+
+thebarkingdog<-"The dog barked at an orange cat. The cat hissed."
+themewlingcat<-"The cat mewled and mewled, and then drank the milk."
+amonkey<-"A monkey climbed the mahogany tree. It hissed and threw its feces at passersby."
+asetting<-"It was cold. The wind hissed in the branches of the yew tree."
+zoostory<-"The monkey rode the horse to the center of the zoo. A dog and a cat were posted as sentries by the tree."
+asergeant<-"A sergeant barked orders at the cadets. She thought, 'What am I doing?'"
+beckett<-"What am I doing, talking, having my figments talk, it can only be me."
+forster<-"The king died. The queen died of grief. She drank herself to death."
+stein<-"Color mahogany center. Rose is a rose is a rose is a rose."
+listofcharacters<-"A dog, a cat, a monkey, the passersby, the sergeant herself, mr. beckett, rose, a king and queen."
+
+# Make a corpus object with the tm package
+# install.packages("tm")
+library("tm")
+texts.df<-rbind(thebarkingdog,themewlingcat,amonkey,asetting,zoostory,asergeant,beckett,forster,stein,listofcharacters)
+toycorpus<-Corpus(DataframeSource(texts.df))
+length(toycorpus)
+summary(toycorpus)
+inspect(toycorpus)
+as.character(toycorpus)
+names(toycorpus)<-c("barkingdog","mewlingcat","amonkey","asetting","zoostory","asergeant","beckett","forster","stein","listofchars")
+
+# Or work directly from files (I've got them in a folder)
+toycorpus<-Corpus(DirSource("toytexts"))
+
+# Clean up the corpus
+toycorpus<-tm_map(toycorpus, content_transformer(tolower)) # lowercase it
+toycorpus<-tm_map(toycorpus, removePunctuation) # strip punctuation
+meta(toycorpus[[1]],"id") # what document is that?
+content(toycorpus[[1]]) # what's in there?
+as.character(toycorpus[1]) # tell me all there is to know about first document
+
+# # More transformations available
+#  toycorpus.stopped<-tm_map(toycorpus, removeWords,stopwords("english"))
+#  toycorpus.stoppedstemmed<-tm_map(toycorpus, stemDocument)
+#  as.character(toycorpus.stoppedstemmed[1])
+
+# Create a DTM
+toy.dtm<-DocumentTermMatrix(toycorpus)
+dim(toy.dtm) # rows, columns (i.e., docs, terms)
+toy.dtm # information about the object
+as.matrix(toy.dtm) # see the actual matrix
+
+# Other DTMs
+cdm.dtm<-DocumentTermMatrix(toycorpus, list(dictionary = c("cat", "dog","monkey","beckett","tree"))) #reduce the DTM with words of interest
+as.matrix(cdm.dtm) # tidier?
+notsparse.dtm<- removeSparseTerms(toy.dtm, 0.85)
+as.matrix(notsparse.dtm) # tidier? -- returns 10 x 20
+
+# Explore the big DTM
+findFreqTerms(toy.dtm,1) # all the terms
+findFreqTerms(toy.dtm,5) # find terms that appear n or more times.
+sort(rowSums(as.matrix(toy.dtm)), decreasing=TRUE) # sort by length of text
+findAssocs(toy.dtm,"cat",.5) # find terms with correlation of .5 or more
+
+# Principle Component Analysis
+toy.pca<-prcomp(toy.dtm) # with raw counts
+scaled.pca<-prcomp(toy.dtm, scale=T) # scaling (because texts of different length)
+
+# Plot the PCAs
+plot(toy.pca$x[,1:2])
+identify(toy.pca$x[,1], toy.pca$x[,2], labels = rownames(toy.dtm),cex=.7)
+biplot(toy.pca,cex=.4)
+# or... 
+plot(scaled.pca$x[,1:2])
+identify(scaled.pca$x[,1:2], labels = rownames(toy.dtm),cex=.7)
+biplot(scaled.pca,cex=.4)
+
+# We get a slightly different PCA visualization, depending on how we scale...
+metatoy.matrix<-as.matrix(toy.dtm)
+meta.scaled<-metatoy.matrix/rowSums(metatoy.matrix)
+meta.scaled<-meta.scaled*10 # multiplies out so you can read it better)
+meta.pca<-prcomp(meta.scaled)
+summary(meta.pca)
+plot(meta.pca$x[,1],meta.pca$x[,2])
+identify(meta.pca$x[,1], meta.pca$x[,2], labels = rownames(toy.dtm),cex=.7)
+
+# Try again with the much smaller matrix
+metatoy.matrix<-as.matrix(cdm.dtm)
+metatoy.matrix[is.nan(metatoy.matrix)] = 0
+meta.scaled2<-metatoy.matrix/rowSums(metatoy.matrix)
+meta.pca<-prcomp(meta.scaled2)
+plot(meta.pca$x[,1],meta.pca$x[,2])
+identify(meta.pca$x[,1], meta.pca$x[,2], labels = rownames(toy.dtm),cex=.7)
+biplot(meta.pca,cex=.4)
+
+# Distances (save for later?)
+metatoy.dist<-dist(metatoy.matrix) #note, distance between listofcharacters.txt and amonkey.txt asergeant.txt is 4. Could do by hand?
+toydist.matrix<-as.matrix(metatoy.dist)
+metatoy.dist<-dist(metatoy.matrix)
+toydist.matrix<-as.matrix(metatoy.dist)
+
+#################################
+
+# That was with a toy corpus, doing the same with Blake and Watts?
+
+# Make two corpora in preparation for PCA
+setwd("~/projects/hack")
+wattscorpus<-Corpus(DirSource("watts"))
+wattscorpus<-tm_map(wattscorpus,stripWhitespace)
+wattscorpus<-tm_map(wattscorpus, content_transformer(tolower))
+wattscorpus<-tm_map(wattscorpus, removePunctuation)
+wattscorpus<-tm_map(wattscorpus, removeWords,stopwords("english"))
+
+blakecorpus<-Corpus(DirSource("songstitled"))
+blakecorpus<-tm_map(blakecorpus,stripWhitespace)
+blakecorpus<-tm_map(blakecorpus, content_transformer(tolower))
+blakecorpus<-tm_map(blakecorpus, removePunctuation)
+blakecorpus<-tm_map(blakecorpus, removeWords,stopwords("english"))
+
+# Make a Watts DTM
+watts.dtm<-DocumentTermMatrix(wattscorpus)
+meta.matrix<-as.matrix(watts.dtm)
+dim(meta.matrix)
+meta.dist<-dist(meta.matrix)
+dist.matrix<-as.matrix(meta.dist)
+meta.scaled<-meta.matrix/rowSums(meta.matrix)
+meta.scaled<-meta.scaled*10000 # multiplies out so you can read it (tiny probabilities, you can say 10 words out of 10000 or so)
+meta.pca<-prcomp(meta.scaled)
+
+# Make a Blake DTM
+blake.dtm<-DocumentTermMatrix(blakecorpus)
+meta.matrix2<-as.matrix(blake.dtm)
+dim(meta.matrix2)
+meta.dist2<-dist(meta.matrix2)
+dist.matrix2<-as.matrix(meta.dist2)
+meta.scaled2<-meta.matrix2/rowSums(meta.matrix2)
+meta.scaled2<-meta.scaled2*10000 # multiplies out so you can read it (tiny probabilities, you can say 10 words out of 10000 or so)
+meta.pca2<-prcomp(meta.scaled2)
+
+# Plots
+plot(meta.pca$x[,1], meta.pca$x[,2], pch=19,cex=.5,col="red") # plot Blake
+points(meta.pca2$x[,1], meta.pca2$x[,2], pch=2,cex=.5,col="blue") # plot Watts
+
+text(meta.pca$x[,1], meta.pca$x[,2], rownames(meta.scaled), cex=.5) # try to put all the text on... (ugly)
+text(meta.pca2$x[,1], meta.pca2$x[,2], rownames(meta.scaled2), cex=.5) 
+
+identify(meta.pca$x[,1], meta.pca$x[,2], labels = rownames(meta.scaled), cex = 0.7) # or pick and choose points to label
+identify(meta.pca2$x[,1], meta.pca2$x[,2], labels = rownames(meta.scaled2), cex = 0.7)
+
+biplot(meta.pca,cex=.4) 
+biplot(meta.pca2,cex=.4)
+# Too much? We could take out stopwords and try again.
+
+
+#############################
+
+getcorpus<-function(dir,type=".txt"){
+  library(stringr)
+  curr.folder<-getwd()
+  setwd(dir)
+  corpus<-list()
+  files<-list.files(pattern=type)
+  for(i in 1:length(files)){
+    text<-scan(files[i],what="char",sep="\n")
+    text<-paste(text,collapse=" ")
+    lowertext<-tolower(text)
+    text.words<-unlist(str_split(lowertext,boundary("word")))
+    text.words<-text.words[which(text.words!="")]
+    corpus[[files[i]]]<-text.words
+  }
+  setwd(curr.folder)
+  return(corpus)
+}
+
+```
+
