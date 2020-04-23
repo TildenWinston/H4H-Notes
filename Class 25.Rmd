@@ -1,0 +1,287 @@
+---
+title: "Class 25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Opening
+
+Final exam, we will review on Tuesday
+
+We are going back into high dimensional space
+
+## Data Wrangling
+
+We are also going to train a support vector machine
+
+
+## Mrs. Bates, who is this what is this
+Pages 252-253
+
+Word vomit
+
+Anything and everything just regurgitated back out
+
+Syntactically free flowing, sporadic bursts
+
+Description is a good place to start when looking at a text
+
+Mrs. Bates as Emma's opposite, something about Mrs. Bates that disturbs Emma
+
+This is direct discourse
+there are things that Emma can't see and therefore we can't see, but they become clearer when we read it again
+* Frank Churchill's eagerness to help Emma down from her carriage
+
+Jane Austen style and character style
+
+"Do not MIMIC her"
+
+## Classification
+Supervised learning
+
+Show computer examples and the computer creates a model
+
+Model works to find dividing line between two different groups of things
+
+What about ambiguous passages - they are really close or even over the line
+
+What about mistakes - as a fan writing fiction, you want your work to be the mistake.
+
+## Trained model defines a hyperplane and margins
+
+
+
+```{r Hacking25-ClassifyingSVM.R}
+# Hacking, Class 22
+# SVM Classification
+# April 22, 2020
+
+# Oh man, this is complicated stuff, but read here for a cookbook approach:
+# https://www.csie.ntu.edu.tw/~cjlin/papers/guide/guide.pdf
+
+# And more here: https://www.csie.ntu.edu.tw/~cjlin/libsvm/
+
+# install.packages("e1071")
+library("e1071") # svm package is in here
+source('Rtools.R') # our tools: using getcorpus(). I'll paste in the same function below.
+# setwd("~/projects/hack/austen")
+
+# More bits: from http://pemberley.com/?page_id=5270
+bitsofivory<-getcorpus("morebits") # 22 bits, all emma rewrites
+mean(sapply(bitsofivory,length)) # Average length is about 5689 (we'll need this below)
+
+# scan and clean emma
+emma.text<-scan("austen-emma.txt",what="char",sep="\n")
+emma<-unlist(strsplit(tolower(emma.text),"\\W"))
+emma<-emma[which(emma!="")]
+
+# Open the file for consulting (use the file menu)?
+
+# chunk the novel into segments that are 5689 words long 
+x<-seq_along(emma)
+bitsofemma<-split(emma,ceiling(x/5758)) #returns 29 chunks, last is only 896 words
+names(bitsofemma)<-paste0("emma",seq_along(bitsofemma)) #name list elements emma1, emma2, etc.
+
+str(bitsofemma)
+
+# combine all the bits
+bits.l<-c(bitsofemma,bitsofivory)
+str(bits.l)
+
+# Our research Q: Can we tell bits of austen from bits of ivory?
+# I'm following Jockers data munging in Chapters 11 and 12, adapting it to my texts. 
+```
+
+
+```{r} 
+# first calculate relative word frequencies
+bitsofemma.freq.l<-lapply(bitsofemma,table)
+bitsofivory.freq.l<-lapply(bitsofivory,table)
+bitsofemma.relfreq.l<-lapply(bitsofemma.freq.l,prop.table)
+names(bitsofemma.relfreq.l)<-paste0("emma",seq_along(bitsofemma.relfreq.l))
+bitsofivory.relfreq.l<-lapply(bitsofivory.freq.l,prop.table)
+
+# a new function: written by Clay Ford to solve my Jockers' problems (thank you, Clay!).
+toDF <- function(x,j){
+  data.frame(ID = j,
+  Word = unlist(dimnames(x)),
+  Freq = as.data.frame(x)$Freq,
+  stringsAsFactors = FALSE)
+}
+
+# use that function, applying it to the lists of frequencies.
+emma.freqs.l <- mapply(toDF,
+                         x = bitsofemma.relfreq.l,
+                         j = names(bitsofemma.relfreq.l),
+                         SIMPLIFY = FALSE) # keep it as a list
+
+ivory.freqs.l <- mapply(toDF,
+                         x = bitsofivory.relfreq.l,
+                         j = names(bitsofivory.relfreq.l),
+                         SIMPLIFY = FALSE)
+
+# check on the output
+# "about" is a fan word
+emma.freqs.l[[2]][1:10,]
+ivory.freqs.l[[2]][1:10,]
+
+#str(emma.freqs.l) # a list: each dataframe element with bit id, words, and frequencies
+
+#bind list of dataframes into one dataframe
+emma.freqs.df<-do.call(rbind.data.frame,emma.freqs.l)
+row.names(emma.freqs.df)<-NULL
+ivory.freqs.df<-do.call(rbind,ivory.freqs.l)
+row.names(ivory.freqs.df)<-NULL
+
+# Prepare dataframes for classification
+allthebits.freqs.df<-rbind(emma.freqs.df,ivory.freqs.df) # one big dataframe
+dim(allthebits.freqs.df) # long rectangular data: 57586 rows, 3 columns
+
+# Cross tabulation: go from long-form to wide-form table
+result.t<-xtabs(Freq ~ ID+Word,data=allthebits.freqs.df)
+# 51 Chunks of text
+# 9716 unique terms
+# Getting into a document term matix
+dim(result.t) #51 rows, 9716 columns
+
+# put labels in the dataframe
+final.df<-as.data.frame.matrix(result.t) 
+final.df[1:10,65:80] # looks like a proper DTM, good!
+chunks<-rownames(final.df) # use rownames to create two labeled classes
+chunks<-gsub(".+txt","fan",chunks) # fans label
+chunks[5:33]<-"austen" # austen label
+final.df<-cbind(final.df,chunks) # now can pull out labels with final.df$chunks
+final.df[1:51,c("emma","knightley","marriage","chunks")] # peek at it, looking at just 3 columns, compare frequencies of character mentions in fan fiction and in "Emma"
+dim(final.df) # 51 9717 -- That's big!
+#View(final.df[, 100:150])
+
+# reduce the size of the dataframe
+freqmeans.v<-colMeans(final.df[,1:9716]) # find average frequency, across corpus, for each word
+greaterthans.v<-which(freqmeans.v>=.001) # choose words/columns greater than .1%
+
+smaller.df<-final.df[,c(names(greaterthans.v),names(final.df[9717]))]
+dim(smaller.df) # 51 144 -- that's better: 51 docs and 144 features.
+View(smaller.df)
+
+```
+
+```{r} 
+
+###########################################################################
+
+# THE MAIN EVENT...
+
+# Note, you can run the following repeatedly and will get different results.
+#RUN AND RERUN FROM HERE DOWN >>>>>>>>>>>>>>
+
+# choose, randomly, half the texts to train on
+randomrows<-sample(nrow(smaller.df),nrow(smaller.df)/2) # sample of half the rows, choosing half the chunks to train on.
+train<-smaller.df[randomrows,] # train on these texts
+test<-smaller.df[-randomrows,] # test on these
+dim(train)
+dim(test)
+
+# train the model
+model.svm<-svm(train[1:143],train$chunks)
+summary(model.svm)
+
+# apply the model to the training data
+pred.svm<-predict(model.svm,train[1:143])
+as.data.frame(pred.svm)
+summary(pred.svm)
+
+
+# Breaking???
+# table(pred.svm,train$chunks) # confusion matrix
+
+# apply the model to the test data
+testing<-predict(model.svm,test[1:143], decision.values=T)
+predict(model.svm,test[1:143], decision.values=T) # see separation scores for each bit
+as.data.frame(testing) # see all the labeling the classifier did. Note, emma29 may be miscategorized as fan fic
+summary(testing)
+table(testing,test[,144]) # confusion matrix. Watch for false negatives (classifier predicted a fan bit, got an Austen bit!)
+
+# Sometimes when I run this, I get emma29 confused as fan fiction (a shorter bit)
+# first time, emma29 mistaken for fan fiction (a false negative)
+# second time, all were right
+# third time, I got emma29 again
+# fourth time, emma29 again
+
+# WHY? is the final chunk mistaken? â€”Something to think about.
+# DISCUSS: because a happy ending, fans reading for marriage, Knightley and Emma? 
+
+# Write the prediction factors into a dataframe so that we can sort through texts
+predictionfactors<-predict(model.svm,test[1:143], decision.values=T)
+# decisval.m<-attr(predictionfactors,"decision.values") # pull out a matrix?
+# Actually, this is better:
+decisval.df <- data.frame(text=names(predictionfactors),
+                          score=as.numeric(attr(predictionfactors,"decision.values")),
+                          stringsAsFactors = F)
+decisval.df<-decisval.df[order(decisval.df$score),] # order the texts
+View(decisval.df)
+
+# First run:
+# See that laraine-knightsinblacksatinwaistcoats.txt is closest to the hyperplane. Read it!
+# See that ulrike-alovemostunwanted1.txt is the farthest from the hyperplane. Read it, if you dare!
+# Although, not, it's also 3 times as long as the average bit (it's 15,467 words, average is 5689)
+# I should probably do this again, but scale better? 
+
+# It appears (maybe) fan fic with lots of dialogue (or letter writing in it) is easy to classify as *not* Austen. Too many first-person pronouns?
+
+# Literary critics will want to look at the words scored...
+model.svm$SV # look at this thing
+dim(model.svm$SV) # 24 by 143
+w = t(model.svm$coefs) %*% model.svm$SV # get feature weights
+weights.df<-sort(as.data.frame(w)) 
+View(weights.df) # top fan words
+View(sort(weights.df,decreasing=T)) #top Austen words
+ 
+##################################################################
+
+# from earlier script (Looking at Pride and Prejudice fan fiction:
+# get bits of ivory corpus
+bitsofivory<-getcorpus("bitsofivory") #84 bits
+mean(sapply(bitsofivory,length)) # Average length is 6684.655 (we'll need this below)
+
+# scan and clean pride and prejudice
+pride<-scan("austen-pride.txt",what="char",sep="\n")
+pride<-gsub("_","",pride)
+pride<-unlist(strsplit(tolower(pride),"\\W"))
+pride<-pride[which(pride!="")]
+
+# chunk the novel into segments that are 6685 words long
+x<-seq_along(pride)
+bitsofausten<-split(pride,ceiling(x/6685)) #returns 19 chunks of 6685, on of 2540
+
+# Interesting false positive when working with Pride and Prejudice.
+# Note: as.data.frame(testing) # see all the labeling the classifier did. Note, pride4 is miscategorized as fan fic
+
+################################################
+
+# In case you can't find your RTools, or don't have a getcorpus function in it:
+
+# This function extracts files from a directory (dir), atomizes as words, 
+# and puts them in a list
+getcorpus<-function(dir,type=".txt"){
+  library(stringr)
+  curr.folder<-getwd()
+  setwd(dir)
+  corpus<-list()
+  files<-list.files(pattern=type)
+  for(i in 1:length(files)){
+    text<-scan(files[i],what="char",sep="\n")
+    text<-paste(text,collapse=" ")
+    lowertext<-tolower(text)
+    text.words<-unlist(str_split(lowertext,boundary("word")))
+    text.words<-text.words[which(text.words!="")]
+    corpus[[files[i]]]<-text.words
+  }
+  setwd(curr.folder)
+  return(corpus)
+}
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
