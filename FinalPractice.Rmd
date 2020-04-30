@@ -1,0 +1,255 @@
+---
+title: "Final Review"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Final Exam Review
+
+Exam will be fill in the blank, prompt and a box, fill in as we go
+
+Final will be a lot like the make-up midterm
+
+```{r Hacking26-FinalExamPractice.R}
+
+# Exam Practice (2020)
+
+##### 1. Predict the class for the following: #----------
+
+class(unlist(strsplit("R is angry and must be propitiated!","\\W")))
+# Character Vector
+
+class(length(letters))
+
+class(class(class))
+
+class(cbind(x=1:5,y=10:14))
+class(x=1:5)
+class(c(1,2,3,4,5)) # Numeric
+
+class(dim(rbind(x=(1:5),y=10:14)))
+
+mymatrix<-rbind(x=(1:5),y=10:14)
+class(cbind(mymatrix,letters[1:2])) # Matrix of characters
+
+class((rbind(x=(1:5),y=10:14)))
+class(data.frame(rbind(x=(1:5),y=10:14)))
+
+# Grabs 3rd column, same as [,3]
+class(data.frame(rbind(x=1:5,y=10:14))[1:2,3]) # subsetting, tricky
+
+df<-data.frame(x=1:5,y=10:14,z=letters[1:5],stringsAsFactors = F)
+class(df[2,])
+class(df[1:2,])
+class(as.matrix(df[,1:2]))
+class(df[,1:2])
+
+class(df[,2])
+class(df[[3]][2]) # bonus, predict what is returned
+# df[[3]] returns the third column as character vector
+# double bracket looks for columns 
+
+class(df[2,3]) #rows then columns
+
+df[[3]]
+df[,3]
+df$z
+class(df[,3])
+
+class(is.na(df[,3][6])) # logical
+
+dim(df)
+col3<-df[,3]
+class(col3[6]) # character, even though col3[6] is NA
+
+# Going a little beyond the exam
+test.m<-matrix(c(2,3,NA,7,NA,2,3,14),4,2)
+class(test.m[1,2]) # aaaRgh!!!
+class(NA)
+
+##### 2.Predict the output for each line of code
+
+nchar("Emma") # Counts characters
+
+length(c("Emma","Jane","Harriet"))
+
+# Can only table a vector
+table(c(letters[1:5],LETTERS[1],c("b","b"))) # Returns counts alphabetized, 
+
+which(letters=="") # integer(0), probably will not be on exam, nothing with the flavor of integer
+which(letters=="c") # returns 3
+
+dim(matrix(1:8,2,4)) # 2 rows 4 columns
+
+little.m<-matrix(1:8,2,4)
+little.m[2,2] # 4
+
+##### 3. Replace NAs in test.m with zeroes: #----------
+# This would be on the open book part of the exam
+# test.m is matrix from earlier
+
+
+test.m[which(is.na(test.m))] <- 0
+# OR
+test.m[is.na(test.m)] <- 0
+
+# OR
+test.m[3,1] <- 0
+test.m[1,2] <- 0
+
+
+test.m
+
+
+#Count the number of twos in the mtrix
+length(which(test.m==2))
+
+##### 4. Turn the following code snippets into functions: #----------
+
+x<-c(1,3,NA,6)
+
+sum(is.na(x))
+
+
+# Rewrite this procedure as a function for finding number of NAs in any vector:
+# not on exam
+howmanyNAs <- function(x){sum(is.na(x))}
+howmanyNAs(x)
+
+x / sum(x, na.rm = TRUE)
+
+# as a function for returning weights in any vector:
+
+weights <- function(data){data / sum(data, na.rm = TRUE)}
+
+
+# Try the first function on the vector a, the second on the vector b
+
+a<-c(NA,1:2,NA,3:4)
+howmanyNAs(a)
+
+b<-sample(1:10,5) # Runs randomly, so different data will be returned
+weights(b)
+
+##### 5. Can you hack this? #----------
+# Find below some tankas from Harryette Mullen (first two) and Sadakichi Hartmann
+# The Japanese tanka is a thirty-one-syllable poem, 
+# traditionally written in a single unbroken line. A form of waka, 
+# Japanese song or verse, tanka translates as "short song."
+
+# Turn these into bags of words. Using intersect(), find words that Mullen, a modern 
+# African-American poet, is drawing from the tradition.
+
+# Can you get sentiment scores for these?
+
+tanka1<-"Awakened too early on Saturday morning 
+by the song of a mockingbird 
+imitating my clock radio alarm.
+*
+Walking along the green path with buds 
+in my ears, too engrossed in the morning news
+to listen to the stillness of the garden."
+
+tanka2<-"Don't need picket fences, brick wall, 
+or razor wire. Our home's protected by 
+prickly pear cactus and thorny bougainvillea.
+*
+Native or not, you're welcome in our gardens. 
+Lavender's dress is not so vibrant as your 
+green trousers and purple velour sleeves."
+
+tanka3<-"Winter? Spring? Who knows? 
+White buds from the plumtrees wing 
+And mingle with the snows. 
+No blue skies these flowers bring, 
+Yet their fragrance augurs Spring." 
+
+tanka4<-"Oh, were the white waves, 
+Far on the glimmering sea 
+That the moonshine laves, 
+Dream flowers drifting to me,--
+I would cull them, love, for thee"
+
+tanka5<-"Moon, somnolent, white, 
+Mirrored in a waveless sea, 
+What fickle mood of night 
+Urged thee from heaven to flee 
+And live in the dawnlit sea?" 
+
+tanka6<-"Like mist on the leas, 
+Fall gently, oh rain of Spring 
+On the orange trees 
+That to Ume's casement clingâ€”
+Perchance, she'll hear the love-bird sing." 
+
+tanka7<-"Though love has grown cold 
+The woods are bright with flowers, 
+Why not as of old 
+Go to the wildwood bowers 
+And dream of--bygone hours!"
+
+tanka8<-"The morning wren sings
+I stand in the moonlit dawn
+Kimono wrapped close
+Last night I made my peace
+Now free from all attachments."
+
+
+# unlist(strsplit(tanka1, "\\W")))
+# 
+# 
+# tankabags.l <- list()
+# 
+# tankas <- c(tanka1, tanka2, tanka3, tanka4, tanka5, tanka6, tanka7, tanka8)
+# 
+# for(i in 1:8){
+#   bagofwords <- tolower(unlist(strsplit(tankas[i], "\\W")))
+#   tankabags.l[[i]] <- bagofwords
+# }
+# 
+# intersect(tankabags.l[[1]], tankabags.l[[2]])
+
+
+mullentankas <- c(tanka1, tanka2)
+othertankas <- c(tanka3, tanka4, tanka5, tanka6, tanka7, tanka8)
+
+intersect()
+
+Reduce(intersect, tankabags.l)
+
+
+##### 6. SHOW ME YOUR ABILITY TO REALLY HACK! #----------
+# Harder than the exam
+
+# Wheel of Fortune Before & After
+# Write a function that takes two strings, e.g.
+s1<-"wheel of fortune"
+s2<-"fortune cookie"
+# and returns the solution to a "Before and After" puzzle:
+# "wheel of fortune cookie"
+# Use your function to combine all the phrases in beforeandafters.txt
+
+# Find point of overlap and use that to concatenate
+
+# Need to string split
+s1 <- unlist(strsplit(s1, "\\W"))
+
+cat(s1[1:(length(s1)-1)], s2)
+
+bandfs <- scan("beforeafter.txt")
+
+beforeafter <- function(s1, s2){
+  s1 <- unlist(str_split(s1, boundary("word")))
+  s2 <- unlist(str_split(s2, boundary("word")))
+  phrase <- paste(c(s1, s2[-which(s2 %in% s1)]), collapse = " ")
+  return(phrase)
+}
+
+beforeafter(s1, s2)
+
+```
+
+

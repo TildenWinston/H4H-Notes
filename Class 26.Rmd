@@ -120,10 +120,10 @@ Will probably go through the finalexam script on Thursday during the review scri
 # https://www.rstudio.com/wp-content/uploads/2015/12/ggplot2-cheatsheet-2.0.pdf
 
 
-setwd("~/projects/hack/ggplot")
+
 library(ggplot2)
 library(stringr)
-source("~/projects/hack/RTools.R") # or open it with file.edit("~/projects/hack/RTools.R")
+source("RTools.R") # or open it with file.edit("~/projects/hack/RTools.R")
 
 # Using blakecorpus and songsinorder.df -- let's regenerate these
 blakecorpus<-getcorpus("songstitled") 
@@ -134,7 +134,7 @@ str(blakecorpus) # list of 46
 
 # Try also with Emma:
 # scan in Emma
-setwd("~/projects/hack/austen")
+
 emma<-scan("austen-emma.txt",what="char",sep="\n")
 
 # chunk by chapter -- note, this should feel like old hat...
@@ -171,7 +171,7 @@ str(bagsofwords.l) # chapters chunked into bags of words, organized as a list
 # BLAKE
 
 # Reload dictionary, recreate function
-dict<-read.delim("~/projects/hack/sentanalysis/AFINN-111.txt", header=FALSE, stringsAsFactors=FALSE) # reads a tab-separated file into adataframes
+dict<-read.delim("sentanalysis/AFINN-111.txt", header=FALSE, stringsAsFactors=FALSE) # reads a tab-separated file into adataframes
 names(dict) <- c('word', 'weight')
 get_sentiment_afinn <- function(bagofwords){
   result <- sum(dict[which(dict$word %in% bagofwords), "weight"])
